@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendar</title>
+    <script src="../src/webc-calendar.js"></script>
+</head>
+<body>
+<webc-calendar disabled-week-days="5,6" id="test" events="2022-05-20:#ff0000|#00ff00|#0000ff,2022-05-19:#ff0000|#00ff00"></webc-calendar>
+<script>
+    document.querySelector('#test').addEventListener('day-selected', function(e){
+        console.log(e.detail);
+    });
+</script>
+</body>
+</html>
