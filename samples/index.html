@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <title>Calendar</title>
     <script src="../src/webc-calendar.js"></script>
+    <style>
+        /*html,body{width:100%;height:100%;padding:0;margin:0;}
+        body{display:flex;flex-direction: column;}
+        body header, body footer{flex:0 0 auto;}
+        webc-calendar{flex: 1 1 auto;width:100%;}*/
+    </style>
 </head>
 <body>
-<webc-calendar selected-dates="2022-05-26" multiple="true" expanded="true" format="YYYY-MM-DD" disabled-dates="2022-05-02,2022-05-16,2022-05-25" disabled-week-days="" id="test" events="2022-05-20:#ae00ff|#00ff00|#0000ff,2022-05-19:#ff0000|#00ff00" colors-scheme="today:#ffffff,todayBackground:#02c39a,border:#eee,hover:#fff,hoverBackground:#028090" date-max="2022-06-10" date-min="2022-05-01"></webc-calendar>
-<script>
-    document.querySelector('#test').addEventListener('day-selected', function(e){
-        console.log(e.detail);
-    });
-</script>
+<header>WebComponent-Calendar</header>
+<!--<webc-calendar selected-dates="2022-05-26" multiple="true" expanded="true" format="YYYY-MM-DD" disabled-dates="2022-05-02,2022-05-16,2022-05-25" disabled-week-days="" id="test" events="2022-05-20:#ae00ff|#00ff00|#0000ff,2022-05-19:#ff0000|#00ff00" colors-scheme="today:#ffffff,todayBackground:#02c39a,border:#eee,hover:#fff,hoverBackground:#028090" date-max="2022-06-10" date-min="2022-05-01"></webc-calendar>-->
+<webc-calendar style="width:400px;" format="YYYY-MM-DD" colors-scheme="today:#ffffff,todayBackground:#02c39a,border:#eee,hover:#fff,hoverBackground:#028090"></webc-calendar>
+<footer>
+    footer
+</footer>
 </body>
 </html>
