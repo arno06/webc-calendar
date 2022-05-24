@@ -12,16 +12,34 @@
     {
         // component attributes
         static get observedAttributes() {
-            return ['format', 'disabled-week-days', 'events'];
+            return ['format', 'multiple', 'disabled-dates', 'disabled-week-days', 'events', 'colors-scheme', 'expanded', 'date-min', 'date-max', 'selected-dates'];
         }
 
         constructor(){
             super();
             let d = new Date();
+            this.format = 'YYYY-MM-DD';
             this.currentMonth = d.getMonth();
             this.currentYear = d.getFullYear();
-            this.disabledWeekDays = null;
+            this.disabledDates = [];
+            this.disabledWeekDays = [];
+            this.expanded = false;
+            this.dateMin = null;
+            this.dateMax = null;
+            this.selectedDates = [];
+            this.multiple = false;
+            this.range = false;//tbd
+            this.colors = {
+                'border':'#eee',
+                'disableBackground':'#f4f4f4',
+                'disable':'#ccc',
+                'todayBackground':'#00aeff',
+                'today':'#fff',
+                'hoverBackground':'#bceef5',
+                'hover':'#fff'
+            };
             this.events = null;
+            this.formatDate(d);
         }
 
         attributeChangedCallback(pAttr, pOldValue, pNewValue){
@@ -34,6 +52,9 @@
                     if(this.shadow){
                         this.disableWeekDays();
                     }
+                    return;
+                case "disabled-dates":
+                    this.disabledDates = pNewValue.split(',');
                     break;
                 case "events":
                     let parsed = pNewValue.split(',').map(this.parseEvents);
@@ -42,14 +63,50 @@
                     parsed.forEach(function(pInfo){
                         ref.events[pInfo.date] = pInfo.events;
                     });
-                    console.log(this.events);
                     break;
+                case "format":
+                    this.format = pNewValue;
+                    break;
+                case "colors-scheme":
+                    let colors = pNewValue.split(',');
+                    for(let c in colors){
+                        let p = colors[c].split(':');
+                        if(!this.colors.hasOwnProperty(p[0])){
+                            continue;
+                        }
+                        this.colors[p[0]] = p[1];
+                    }
+                    break;
+                case "range":
+                case "multiple":
+                case "expanded":
+                    this[pAttr] = pNewValue==="true";
+                    break;
+                case "date-min":
+                    this.dateMin = this.strToDate(pNewValue);
+                    break;
+                case "date-max":
+                    this.dateMax = this.strToDate(pNewValue);
+                    break;
+                case "selected-dates":
+                    this.selectedDates = pNewValue.split(',');
+                    if(!this.multiple && this.selectedDates.length>1){
+                        this.selectedDates = [this.selectedDates[0]];
+                    }
+                    break;
+            }
+            if(this.shadow){
+                this.render(this.currentMonth);
             }
         }
 
         connectedCallback(){
             this.shadow = this.attachShadow({mode: 'closed'});
-            this.shadow.innerHTML = TEMPLATE;
+            let tpl = TEMPLATE;
+            for(let l in this.colors){
+                tpl = tpl.replaceAll('@'+l, this.colors[l]);
+            }
+            this.shadow.innerHTML = tpl;
             let ref = this;
             this.shadow.querySelectorAll('header>.button').forEach(function(pButton){
                 pButton.addEventListener('click', ref.monthNavHandler.proxy(ref));
@@ -86,6 +143,9 @@
         render(pMonth){
             let ref = this;
             let shadow = this.shadow;
+            if(this.expanded){
+                shadow.querySelector('.container').classList.add('expanded');
+            }
             shadow.querySelector('.container .days').innerHTML = "";
             let currentDates = this.getDatesByMonth(pMonth);
             currentDates.forEach(function(pDays){
@@ -93,10 +153,13 @@
                 col.classList.add('col');
                 pDays.forEach(function(pDay){
                     let d = document.createElement('div');
+                    if(pDay.title){
+                        d.setAttribute("title", pDay.title);
+                    }
                     d.classList.add('day');
                     d.setAttribute("data-value", pDay.value);
-                    if(pDay.css){
-                        d.classList.add(pDay.css);
+                    if(pDay.css.length>0){
+                        pDay.css.forEach((pCls)=>d.classList.add(pCls));
                     }
                     let s = document.createElement('span');
                     s.innerHTML = pDay.label;
@@ -124,7 +187,13 @@
         }
 
         daySelectedHandler(e){
-            this.dispatchEvent(new CustomEvent('day-selected', {composed:true, detail:e.currentTarget.getAttribute("data-value")}));
+            if(!this.multiple){
+                this.selectedDates = [];
+            }
+            let val = e.currentTarget.getAttribute("data-value");
+            this.selectedDates.push(val)
+            this.dispatchEvent(new CustomEvent('day-selected', {composed:true, detail:val}));
+            this.render(this.currentMonth);
         }
 
         getDatesByMonth(pMonth){
@@ -139,29 +208,41 @@
             this.shadow.querySelector('header>div>.month').innerHTML = Localization.months[this.currentMonth];
             this.shadow.querySelector('header>div>.year label').innerHTML = this.currentYear.toString();
 
+            let formattedToday = this.formatDate(new Date());
+            let day;
             while(d.getMonth()===month){
-                let day = d.getDay();
-                let cls = d.toUTCString()===(new Date().toUTCString())?"today":"";//A Améliorer
-                let m = d.getMonth()+1;
-                if(m<10){
-                    m = "0"+m;
+                day = d.getDay();
+                let formattedDate = this.formatDate(d);
+                let cls = [];
+                let title = null;
+                if(formattedDate===formattedToday){
+                    cls.push("today");
+                    title = Localization.today;
                 }
-                let date = d.getDate();
-                if(date<10){
-                    date = "0"+date;
+                if(this.disabledDates.indexOf(formattedDate)>-1
+                || (this.dateMin && d.getTime()<this.dateMin.getTime())
+                || (this.dateMax && d.getTime()>this.dateMax.getTime())){
+                    cls.push("disabled");
                 }
-                dates[day].push({label:d.getDate(), value:d.getFullYear()+'-'+m+'-'+date, css:cls});
+                if(this.selectedDates.indexOf(formattedDate)>-1){
+                    cls.push("selected");
+                }
+                dates[day].push({label:d.getDate(), value:formattedDate, css:cls, title:title});
                 d.setDate(d.getDate()+1);
             }
             let sundays = dates.shift();
             dates.push(sundays);
+
+            for(day;day<dates.length;day++){
+                dates[day].push({label:'', value:'', css:['disabled']});
+            }
 
             d1--;
             if(d1<0){
                 d1 = 6;
             }
             for(let i = 0, max = d1; i<max; i++){
-                dates[i].unshift({label:'', value:'', css:'disabled'});
+                dates[i].unshift({label:'', value:'', css:['disabled']});
             }
             return dates;
         }
@@ -176,11 +257,38 @@
                 }
             });
         }
+
+        formatDate(pDate){
+            let parts = {
+                'YYYY':pDate.getUTCFullYear(),
+                'MM':pDate.getMonth() + 1,
+                'DD':pDate.getDate()
+            };
+            if(parts.MM<10){
+                parts.MM = "0"+parts.MM;
+            }
+            if(parts.DD<10){
+                parts.DD = "0"+parts.DD;
+            }
+
+            let val = this.format;
+            for(let j in parts){
+                val = val.replace(j, parts[j]);
+            }
+            return val;
+        }
+
+        strToDate(pStr){
+            let y = pStr.slice(this.format.indexOf('YYYY'), 4);
+            let m = pStr.slice(this.format.indexOf('MM'), this.format.indexOf('MM')+2);
+            let d = pStr.slice(this.format.indexOf('DD'), this.format.indexOf('DD')+2);
+            return new Date(y,m-1,d);
+        }
     }
 
     const TEMPLATE = `
 <style>
-    :host{border-radius:5px;position:relative;user-select: none;display:flex;flex-direction: column;width:700px;background:#fff;box-shadow:0 0 3px rgba(0, 0, 0, .25);padding:1em;box-sizing: border-box;font-family: sans-serif;}
+    :host{--disable-color:#f4f4f4;--border-color:#eee;border-radius:5px;position:relative;user-select: none;display:flex;flex-direction: column;width:700px;background:#fff;box-shadow:0 0 3px rgba(0, 0, 0, .25);padding:1em;box-sizing: border-box;font-family: sans-serif;}
     .button{display:flex;cursor: pointer;width:30px;height:30px;border-radius: 50%;justify-content: center;align-items: center;border:solid 1px transparent;}
     .button:hover{background:rgba(32,33,36,0.039);border:solid 1px rgba(32,33,36,0.19);}
     header{display:flex;justify-content: space-between;align-items: center;flex:0 0 auto;}
@@ -198,20 +306,25 @@
     .container>div{display:flex;justify-content: space-between;}
     .container>div>div{flex: 1 1 auto;text-align: center;}
     .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
-    .container>.days{border-left:solid 1px #999;}
-    .container>.days>.col{border-right:solid 1px #999;border-bottom:solid 1px #999;}
-    .container>.days>.col.disabled{background:#f4f4f4;pointer-events: none;}
+    .container>.days{border-left:solid 1px @border;}
+    .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
+    .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
     .container>.days>.col.disabled>.day>span{color:#ccc;}
-    .container>.days>.col>.day{position:relative;border-top:solid 1px #999;height:50px;display:flex;justify-content: center;align-items: center;cursor:pointer;}
-    .container>.days>.col>.day:last-of-type{border-bottom:solid 1px #999;}
+    .container>.days>.col>.day{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;cursor:pointer;}
     .container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
-    .container>.days>.col>.day:hover>span{background:#bceef5;color:#000;}
-    .container>.days>.col>.day.today>span{background:#00aeff;color:#fff;}
-    .container>.days>.col>.day.disabled{pointer-events: none;}
+    .container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
+    .container>.days>.col>.day:hover>span,
+    .container>.days>.col>.day.selected>span{background:@hoverBackground;color:@hover;}
+    .container>.days>.col>.day.disabled{pointer-events: none;background: @disableBackground;}
     
     .container>.days>.col>.day>.events{display:flex;position:absolute;bottom:3px;}
     .container>.days>.col>.day>.events>div{width:5px;height:5px;margin-right:3px;border-radius: 50%;}
     .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
+    
+    .container.expanded>.days>.col>.day{height:100px;align-items: center;justify-content:start;flex-direction: column;}
+    .container.expanded>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
+    .container.expanded>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
+
 </style>
 <header><span class="previous button">&lt;</span><div><span class="month">Mai</span> <span class="year"><span class="previous button">&lt;</span><label>2022</label><span class="next button">&gt;</span></span></div><span class="next button">&gt;</span></header>
 <div class="container">
@@ -221,6 +334,7 @@
 `;
 
     let Localization = {
+        'today':'Aujourd\'hui',
         'days':['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
         'months':['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
     };
