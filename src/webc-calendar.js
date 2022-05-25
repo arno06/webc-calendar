@@ -5,6 +5,7 @@ class WebCCalendar extends HTMLElement
     static EVENT_DAY_SELECTED = "day_selected";
     static EVENT_DAY_UNSELECTED = "day_unselected";
     static EVENT_SELECTION_UPDATED = "selection_updated";
+    static EVENT_MONTH_CHANGED = "month_changed";
 
     static Localization = {
     'today':'Aujourd\'hui',
@@ -97,6 +98,9 @@ class WebCCalendar extends HTMLElement
                 if(!this.isMultiple() && this.selectedDates.length>1){
                     this.selectedDates = [this.selectedDates[0]];
                 }
+                let d = this.strToDate(this.selectedDates[0]);
+                this.currentMonth = d.getMonth();
+                this.currentYear = d.getFullYear();
                 break;
             case "mode":
                 if(['single', 'multiple', 'range'].indexOf(pNewValue)){
@@ -148,12 +152,14 @@ class WebCCalendar extends HTMLElement
         let direction = pEvent.currentTarget.classList.contains('previous')?-1:1;
         this.currentYear += direction;
         this.render();
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
     }
 
     monthNavHandler(pEvent){
         let direction = pEvent.currentTarget.classList.contains('previous')?-1:1;
         this.currentMonth+=direction;
         this.render();
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
     }
 
     todayClickedHandler(e){
@@ -357,11 +363,11 @@ class WebCCalendar extends HTMLElement
     header>div.picker .year .next{transform:rotate(-90deg);}
     header>div.picker .year:hover .previous,
     header>div.picker .year:hover .next{opacity: 1;}
-    .container{flex: 1 1 auto;background:#fff;}
+    .container{flex: 1 1 auto;background:#fff;display:flex;flex-direction: column;}
     .container>div{display:flex;justify-content: space-between;}
     .container>div>div{flex: 1;text-align: center;}
     .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
-    .container>.days{border-left:solid 1px @border;}
+    .container>.days{border-left:solid 1px @border;flex:1;}
     .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
     .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
     .container>.days>.col.disabled>.day>span{color:#ccc;}
@@ -376,7 +382,8 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col>.day>.events>div{width:5px;height:5px;margin-right:3px;border-radius: 50%;}
     .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
     
-    .container.expanded>.days>.col>.day{height:100px;align-items: center;justify-content:start;flex-direction: column;}
+    .container.expanded>.days>.col{flex:1;display:flex;flex-direction: column;}
+    .container.expanded>.days>.col>.day{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;}
     .container.expanded>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
     .container.expanded>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
 

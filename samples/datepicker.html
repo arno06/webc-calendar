@@ -13,7 +13,7 @@
 <form>
     <p>
         <label>Date : </label>
-        <div class="input"><input type="text" data-comp="webc-calendar" value="2022-05-02" name="bouboup[date]"/></div>
+        <div class="input"><input type="text" data-comp="webc-calendar" value="2021-03-02" name="bouboup[date]"/></div>
     </p>
 </form>
 <footer>
@@ -34,6 +34,7 @@
         pElement.parentNode.appendChild(calendar);
 
         pElement.addEventListener('focus', function(){
+            calendar.setAttribute("selected-dates", "");
             calendar.setAttribute("selected-dates", pElement.getAttribute("value"));
             calendar.style.display = "block";
         });
@@ -46,7 +47,8 @@
         });
 
         calendar.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(e){
-            pElement.setAttribute("value", e.detail.value)
+            pElement.setAttribute("value", e.detail.value);
+            calendar.style.display = "none";
         });
     });
 </script>
