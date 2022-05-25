@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendar</title>
+    <script src="../src/webc-calendar.js"></script>
+    <style>
+
+    </style>
+</head>
+<body>
+<header>WebComponent-Calendar</header>
+<form>
+    <p>
+        <label>Date : </label>
+        <div class="input"><input type="text" data-comp="webc-calendar" value="2022-05-02" name="bouboup[date]"/></div>
+    </p>
+</form>
+<footer>
+    footer
+</footer>
+<script>
+    document.querySelectorAll('input[data-comp="webc-calendar"]').forEach(function(pElement){
+
+        let calendar = document.createElement('webc-calendar');
+        calendar.setAttribute("selected-dates", pElement.getAttribute("value"));
+        calendar.style.width = "350px";
+        calendar.style.position = "absolute";
+        calendar.style.top = "100%";
+        calendar.style.left = "0";
+        calendar.style.marginTop = "10px";
+        calendar.style.display = "none";
+        pElement.parentNode.style.position = "relative";
+        pElement.parentNode.appendChild(calendar);
+
+        pElement.addEventListener('focus', function(){
+            calendar.setAttribute("selected-dates", pElement.getAttribute("value"));
+            calendar.style.display = "block";
+        });
+
+        document.addEventListener('click', function(e){
+            if(e.target === pElement || e.target === calendar){
+                return;
+            }
+            calendar.style.display = "none";
+        });
+
+        calendar.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(e){
+            pElement.setAttribute("value", e.detail.value)
+        });
+    });
+</script>
+</body>
+</html>

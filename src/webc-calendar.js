@@ -1,58 +1,7 @@
 NodeList.prototype.forEach = NodeList.prototype.forEach||Array.prototype.forEach;
 Function.prototype.proxy = Function.prototype.proxy||function(pInstance) {let ref = this;return function(){ref.apply(pInstance, arguments);};};
-
 class WebCCalendar extends HTMLElement
 {
-    static TEMPLATE = `
-<style>
-    :host{--disable-color:#f4f4f4;--border-color:#eee;border-radius:5px;position:relative;user-select: none;display:flex;flex-direction: column;width:700px;background:#fff;box-shadow:0 0 3px rgba(0, 0, 0, .25);padding:1em;box-sizing: border-box;font-family: sans-serif;}
-    .button{display:flex;cursor: pointer;width:30px;height:30px;border-radius: 50%;justify-content: center;align-items: center;border:solid 1px transparent;}
-    .button:hover{background:rgba(32,33,36,0.039);border:solid 1px rgba(32,33,36,0.19);}
-    header{display:flex;justify-content: start;align-items: center;flex:0 0 auto;}
-    header .button.today{font-size:.8em;width:auto;border-radius:3px;padding-left:10px;padding-right:10px;margin-right:10px;border:solid 1px #afafaf;}
-    header>div.picker{display:flex;align-items: center;}
-    header>div.picker>div{display:flex;align-items: center;}
-    header>div.picker .month{padding:.5em 0;margin-right:5px;}
-    header>div.picker .months .button{background:url('@svg') no-repeat center center;background-size:20px 20px;}
-    header>div.picker .months .button.previous{transform:rotate(180deg);}
-    header>div.picker .year{display:flex;align-items: center;}
-    header>div.picker .year label{padding:.5em 0;}
-    header>div.picker .year .previous,
-    header>div.picker .year .next{background:url('@svg') no-repeat center center;background-size:10px 10px;transform:rotate(90deg);display:flex;justify-content:center;align-items:center;width:16px;height:16px;font-size:0.8em;text-align: center;opacity: 0;transition:opacity .3s;padding-left:0;padding-right:0;}
-    header>div.picker .year .next{transform:rotate(-90deg);}
-    header>div.picker .year:hover .previous,
-    header>div.picker .year:hover .next{opacity: 1;}
-    .container{flex: 1 1 auto;background:#fff;}
-    .container>div{display:flex;justify-content: space-between;}
-    .container>div>div{flex: 1 1 auto;text-align: center;}
-    .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
-    .container>.days{border-left:solid 1px @border;}
-    .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
-    .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
-    .container>.days>.col.disabled>.day>span{color:#ccc;}
-    .container>.days>.col>.day{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;cursor:pointer;}
-    .container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
-    .container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
-    .container>.days>.col>.day:hover>span,
-    .container>.days>.col>.day.selected>span{background:@hoverBackground;color:@hover;}
-    .container>.days>.col>.day.disabled{pointer-events: none;background: @disableBackground;}
-    
-    .container>.days>.col>.day>.events{display:flex;position:absolute;bottom:3px;}
-    .container>.days>.col>.day>.events>div{width:5px;height:5px;margin-right:3px;border-radius: 50%;}
-    .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
-    
-    .container.expanded>.days>.col>.day{height:100px;align-items: center;justify-content:start;flex-direction: column;}
-    .container.expanded>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
-    .container.expanded>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
-
-</style>
-<header><div class="button today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month">Mai</span> <span class="year"><label>2022</label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
-<div class="container">
-    <div class="labels"></div>
-    <div class="days"></div>
-</div>
-`;
-
     static EVENT_DAY_SELECTED = "day_selected";
     static EVENT_DAY_UNSELECTED = "day_unselected";
     static EVENT_SELECTION_UPDATED = "selection_updated";
@@ -65,9 +14,11 @@ class WebCCalendar extends HTMLElement
 
     static ARROW = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 330 330"><path d="M250.606,154.389l-150-149.996c-5.857-5.858-15.355-5.858-21.213,0.001 c-5.857,5.858-5.857,15.355,0.001,21.213l139.393,139.39L79.393,304.394c-5.857,5.858-5.857,15.355,0.001,21.213 C82.322,328.536,86.161,330,90,330s7.678-1.464,10.607-4.394l149.999-150.004c2.814-2.813,4.394-6.628,4.394-10.606 C255,161.018,253.42,157.202,250.606,154.389z"/></svg>';
 
+    static SEPARATOR = ";";
+
     // component attributes
     static get observedAttributes() {
-        return ['format', 'multiple', 'disabled-dates', 'disabled-week-days', 'events', 'colors-scheme', 'expanded', 'date-min', 'date-max', 'selected-dates'];
+        return ['format', 'mode', 'disabled-dates', 'disabled-week-days', 'events', 'colors-scheme', 'expanded', 'date-min', 'date-max', 'selected-dates'];
     }
 
     constructor(){
@@ -82,8 +33,8 @@ class WebCCalendar extends HTMLElement
         this.dateMin = null;
         this.dateMax = null;
         this.selectedDates = [];
-        this.multiple = false;
         this.range = false;//tbd
+        this.mode = 'single';
         this.colors = {
             'border':'#eee',
             'disableBackground':'#f4f4f4',
@@ -91,7 +42,7 @@ class WebCCalendar extends HTMLElement
             'todayBackground':'#00aeff',
             'today':'#fff',
             'hoverBackground':'#bceef5',
-            'hover':'#fff'
+            'hover':'#000'
         };
         this.events = [];
         this.formatDate(d);
@@ -103,16 +54,16 @@ class WebCCalendar extends HTMLElement
         }
         switch(pAttr){
             case "disabled-week-days":
-                this.disabledWeekDays = pNewValue.split(',').map(Number);
+                this.disabledWeekDays = pNewValue.split(WebCCalendar.SEPARATOR).map(Number);
                 if(this.shadow){
                     this.disableWeekDays();
                 }
                 return;
             case "disabled-dates":
-                this.disabledDates = pNewValue.split(',');
+                this.disabledDates = pNewValue.split(WebCCalendar.SEPARATOR);
                 break;
             case "events":
-                let parsed = pNewValue.split(',').map(this.parseEvents);
+                let parsed = pNewValue.split(WebCCalendar.SEPARATOR).map(this.parseEvents);
                 this.events = {};
                 let ref = this;
                 parsed.forEach(function(pInfo){
@@ -123,7 +74,7 @@ class WebCCalendar extends HTMLElement
                 this.format = pNewValue;
                 break;
             case "colors-scheme":
-                let colors = pNewValue.split(',');
+                let colors = pNewValue.split(WebCCalendar.SEPARATOR);
                 for(let c in colors){
                     let p = colors[c].split(':');
                     if(!this.colors.hasOwnProperty(p[0])){
@@ -132,8 +83,6 @@ class WebCCalendar extends HTMLElement
                     this.colors[p[0]] = p[1];
                 }
                 break;
-            case "range":
-            case "multiple":
             case "expanded":
                 this[pAttr] = pNewValue==="true";
                 break;
@@ -144,20 +93,23 @@ class WebCCalendar extends HTMLElement
                 this.dateMax = this.strToDate(pNewValue);
                 break;
             case "selected-dates":
-                this.selectedDates = pNewValue.split(',');
-                if(!this.multiple && this.selectedDates.length>1){
+                this.selectedDates = pNewValue.split(WebCCalendar.SEPARATOR);
+                if(!this.isMultiple() && this.selectedDates.length>1){
                     this.selectedDates = [this.selectedDates[0]];
                 }
                 break;
+            case "mode":
+                if(['single', 'multiple', 'range'].indexOf(pNewValue)){
+                    this.mode = pNewValue;
+                }
+                break;
         }
-        if(this.shadow){
-            this.render();
-        }
+        this.render();
     }
 
     connectedCallback(){
         this.shadow = this.attachShadow({mode: 'closed'});
-        let tpl = WebCCalendar.TEMPLATE;
+        let tpl = this.getTemplate();
         tpl = tpl.replaceAll('@local.today', WebCCalendar.Localization.today);
         tpl = tpl.replaceAll('@svg', WebCCalendar.ARROW);
         for(let l in this.colors){
@@ -173,10 +125,15 @@ class WebCCalendar extends HTMLElement
         });
         this.shadow.querySelector('header>.button.today').addEventListener('click', this.todayClickedHandler.proxy(this));
         let labels = this.shadow.querySelector('.container .labels');
+        let shortLabels = !this.expanded || (labels.offsetWidth/7)<60;
         WebCCalendar.Localization.days.forEach(function(pDay){
             let div = document.createElement('div');
             div.classList.add('weekday');
-            div.innerHTML = pDay.slice(0, 3)+'.';
+            let l = pDay;
+            if(shortLabels){
+                l = l.slice(0, 3)+'.';
+            }
+            div.innerHTML = l;
             labels.appendChild(div);
         });
         this.render();
@@ -207,6 +164,9 @@ class WebCCalendar extends HTMLElement
     }
 
     render(){
+        if(!this.shadow){
+            return;
+        }
         let ref = this;
         let shadow = this.shadow;
         if(this.expanded){
@@ -259,7 +219,7 @@ class WebCCalendar extends HTMLElement
             this.selectedDates.splice(this.selectedDates.indexOf(val), 1);
             evt = WebCCalendar.EVENT_DAY_UNSELECTED;
         }else{
-            if(!this.multiple){
+            if(!this.isMultiple()){
                 this.selectedDates = [];
             }
             this.selectedDates.push(val)
@@ -268,7 +228,8 @@ class WebCCalendar extends HTMLElement
         this.render();
         let detail = {
             value:val,
-            selectedDates:this.selectedDates
+            selectedDates:this.selectedDates,
+            mode:this.mode
         };
         this.dispatchEvent(new CustomEvent(evt, {composed:true, detail:detail}));
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_SELECTION_UPDATED, {composed:true, detail:detail}));
@@ -361,6 +322,71 @@ class WebCCalendar extends HTMLElement
         let m = pStr.slice(this.format.indexOf('MM'), this.format.indexOf('MM')+2);
         let d = pStr.slice(this.format.indexOf('DD'), this.format.indexOf('DD')+2);
         return new Date(y,m-1,d);
+    }
+
+    isMultiple(){
+        return this.mode === 'multiple';
+    }
+
+    isRange(){
+        return this.mode === 'range';
+    }
+
+    isSingle(){
+        return this.mode === 'single';
+    }
+
+
+    getTemplate(){
+        return `<style>
+    :host{--disable-color:#f4f4f4;--border-color:#eee;border-radius:5px;position:relative;user-select: none;display:flex;flex-direction: column;width:700px;background:#fff;box-shadow:0 0 3px rgba(0, 0, 0, .25);padding:0.9em;box-sizing: border-box;font-family: sans-serif;}
+    .button{display:flex;cursor: pointer;width:30px;height:30px;border-radius: 50%;justify-content: center;align-items: center;border:solid 1px transparent;}
+    .button:hover{background:rgba(32,33,36,0.039);border:solid 1px rgba(32,33,36,0.19);}
+    header{display:flex;justify-content: start;align-items: center;flex:0 0 auto;margin-bottom:0.5em;}
+    header .button.today{font-size:.8em;width:auto;border-radius:3px;padding-left:10px;padding-right:10px;margin-right:10px;border:solid 1px #afafaf;}
+    header>div.picker{display:flex;align-items: center;}
+    header>div.picker>div{display:flex;align-items: center;}
+    header>div.picker .month{padding:.5em 0;margin-right:5px;}
+    header>div.picker .months .button{background:url('@svg') no-repeat center center;background-size:16px 16px;}
+    header>div.picker .months .button.previous{transform:rotate(180deg);}
+    header>div.picker .year{display:flex;align-items: center;}
+    header>div.picker .year label{padding:.5em 0;}
+    header>div.picker .year .actions{margin-left:4px;}
+    header>div.picker .year .previous,
+    header>div.picker .year .next{background:url('@svg') no-repeat 3px 3px;background-size:10px 10px;transform:rotate(90deg);display:flex;justify-content:center;align-items:center;width:16px;height:16px;font-size:0.8em;text-align: center;opacity: 0;transition:opacity .3s;padding-left:0;padding-right:0;}
+    header>div.picker .year .next{transform:rotate(-90deg);}
+    header>div.picker .year:hover .previous,
+    header>div.picker .year:hover .next{opacity: 1;}
+    .container{flex: 1 1 auto;background:#fff;}
+    .container>div{display:flex;justify-content: space-between;}
+    .container>div>div{flex: 1;text-align: center;}
+    .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
+    .container>.days{border-left:solid 1px @border;}
+    .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
+    .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
+    .container>.days>.col.disabled>.day>span{color:#ccc;}
+    .container>.days>.col>.day{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;cursor:pointer;}
+    .container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
+    .container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
+    .container>.days>.col>.day:hover>span,
+    .container>.days>.col>.day.selected>span{background:@hoverBackground;color:@hover;}
+    .container>.days>.col>.day.disabled{pointer-events: none;background: @disableBackground;}
+    
+    .container>.days>.col>.day>.events{display:flex;position:absolute;bottom:3px;}
+    .container>.days>.col>.day>.events>div{width:5px;height:5px;margin-right:3px;border-radius: 50%;}
+    .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
+    
+    .container.expanded>.days>.col>.day{height:100px;align-items: center;justify-content:start;flex-direction: column;}
+    .container.expanded>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
+    .container.expanded>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
+
+</style>
+<header><div class="button today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month">Mai</span> <span class="year"><label>2022</label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
+<div class="container">
+    <div class="labels"></div>
+    <div class="days"></div>
+</div>
+`;
     }
 }
 
