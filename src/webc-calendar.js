@@ -47,6 +47,9 @@ class WebCCalendar extends HTMLElement
         };
         this.events = [];
         this.formatDate(d);
+        console.log(this.getWeekNumber(new Date(2022, 0, 1)));
+        console.log(this.getWeekNumber(new Date(2022, 0, 2)));
+        console.log(this.getWeekNumber(new Date(2022, 0, 3)));
     }
 
     attributeChangedCallback(pAttr, pOldValue, pNewValue){
@@ -179,8 +182,18 @@ class WebCCalendar extends HTMLElement
             shadow.querySelector('.container').classList.add('expanded');
         }
         shadow.querySelector('.container .days').innerHTML = "";
-        let currentDates = this.getDatesByMonth(this.currentMonth);
-        currentDates.forEach(function(pDays){
+        let month = this.getMonth(this.currentMonth);
+        let colWeeks = document.createElement('div');
+        colWeeks.classList.add('col');
+        colWeeks.classList.add('weeks');
+        month.weeks.forEach(function(pWeek){
+            let d = document.createElement('div');
+            d.classList.add('week');
+            d.innerHTML = pWeek;
+            colWeeks.appendChild(d);
+        });
+        shadow.querySelector('.container .days').appendChild(colWeeks);
+        month.dates.forEach(function(pDays){
             let col = document.createElement('div');
             col.classList.add('col');
             pDays.forEach(function(pDay){
@@ -241,12 +254,28 @@ class WebCCalendar extends HTMLElement
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_SELECTION_UPDATED, {composed:true, detail:detail}));
     }
 
-    getDatesByMonth(pMonth){
+    getWeekNumber(pDate){
+        let fd = new Date(pDate.getFullYear(),0, 1);
+        let day = fd.getDay()-1;
+        if(day<0){
+            day = 6;
+        }
+        fd.setDate(fd.getDate() + (7-day));
+        let week = 0;
+        while(fd.getTime()<=pDate.getTime()){
+            fd.setDate(fd.getDate()+7);
+            week++;
+        }
+        return week;
+    }
+
+    getMonth(pMonth){
         let dates = [[], [], [], [], [], [], []];
         let d = new Date();
         d.setFullYear(this.currentYear, pMonth, 1);
         let month = d.getMonth();
         let d1 = d.getDay();
+        let weeks = [this.getWeekNumber(d)];
 
         this.currentYear = d.getFullYear();
         this.currentMonth = month;
@@ -273,6 +302,9 @@ class WebCCalendar extends HTMLElement
                 cls.push("selected");
             }
             dates[day].push({label:d.getDate(), value:formattedDate, css:cls, title:title});
+            if(day===1){
+                weeks.push(this.getWeekNumber(d));
+            }
             d.setDate(d.getDate()+1);
         }
         let sundays = dates.shift();
@@ -289,7 +321,10 @@ class WebCCalendar extends HTMLElement
         for(let i = 0, max = d1; i<max; i++){
             dates[i].unshift({label:'', value:'', css:['disabled']});
         }
-        return dates;
+        return {
+            weeks:weeks,
+            dates:dates
+        };
     }
 
     disableWeekDays(){
