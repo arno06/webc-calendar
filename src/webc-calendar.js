@@ -275,7 +275,7 @@ class WebCCalendar extends HTMLElement
         d.setFullYear(this.currentYear, pMonth, 1);
         let month = d.getMonth();
         let d1 = d.getDay();
-        let weeks = [this.getWeekNumber(d)];
+        let weeks = [];
 
         this.currentYear = d.getFullYear();
         this.currentMonth = month;
@@ -302,7 +302,7 @@ class WebCCalendar extends HTMLElement
                 cls.push("selected");
             }
             dates[day].push({label:d.getDate(), value:formattedDate, css:cls, title:title});
-            if(day===1){
+            if(day===1||weeks.length===0){
                 weeks.push(this.getWeekNumber(d));
             }
             d.setDate(d.getDate()+1);
@@ -310,6 +310,11 @@ class WebCCalendar extends HTMLElement
         let sundays = dates.shift();
         dates.push(sundays);
 
+        console.log(day, dates.length);
+        if(day===0){
+            day = 7;
+        }
+        console.log(day, dates.length);
         for(day;day<dates.length;day++){
             dates[day].push({label:'', value:'', css:['disabled']});
         }
@@ -400,6 +405,7 @@ class WebCCalendar extends HTMLElement
     header>div.picker .year:hover .next{opacity: 1;}
     .container{flex: 1 1 auto;background:#fff;display:flex;flex-direction: column;}
     .container>div{display:flex;justify-content: space-between;}
+    .container>.labels{padding-left:16px;}
     .container>div>div{flex: 1;text-align: center;}
     .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
     .container>.days{border-left:solid 1px @border;flex:1;}
@@ -421,6 +427,10 @@ class WebCCalendar extends HTMLElement
     .container.expanded>.days>.col>.day{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;}
     .container.expanded>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
     .container.expanded>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
+    
+    .container>.days>.col.weeks{flex:0;width:20px;background:#eaeaea;color:#444;}
+    .container>.days>.col.weeks>.week{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;font-size:0.7em;box-sizing: border-box;padding:0 2px;width:16px;cursor:default;}
+    .container.expanded>.days>.col.weeks>.week{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;padding:3px;}
 
 </style>
 <header><div class="button today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month">Mai</span> <span class="year"><label>2022</label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
