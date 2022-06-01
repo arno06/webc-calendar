@@ -47,9 +47,6 @@ class WebCCalendar extends HTMLElement
         };
         this.events = [];
         this.formatDate(d);
-        console.log(this.getWeekNumber(new Date(2022, 0, 1)));
-        console.log(this.getWeekNumber(new Date(2022, 0, 2)));
-        console.log(this.getWeekNumber(new Date(2022, 0, 3)));
     }
 
     attributeChangedCallback(pAttr, pOldValue, pNewValue){
@@ -117,6 +114,7 @@ class WebCCalendar extends HTMLElement
     connectedCallback(){
         this.shadow = this.attachShadow({mode: 'closed'});
         let tpl = this.getTemplate();
+        tpl = tpl.replaceAll('@date.formatted_today', this.formatDate(new Date()));
         tpl = tpl.replaceAll('@local.today', WebCCalendar.Localization.today);
         tpl = tpl.replaceAll('@svg', WebCCalendar.ARROW);
         for(let l in this.colors){
@@ -143,6 +141,7 @@ class WebCCalendar extends HTMLElement
             div.innerHTML = l;
             labels.appendChild(div);
         });
+        this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
         this.render();
     }
 
@@ -156,6 +155,14 @@ class WebCCalendar extends HTMLElement
         this.currentYear += direction;
         this.render();
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
+    }
+
+    scrollHandler(pEvent){
+        pEvent.preventDefault();
+        this.currentMonth += pEvent.deltaY>0?1:-1;
+        this.render();
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
+
     }
 
     monthNavHandler(pEvent){
@@ -178,8 +185,11 @@ class WebCCalendar extends HTMLElement
         }
         let ref = this;
         let shadow = this.shadow;
+        let base = this.shadow.querySelector('.container');
         if(this.expanded){
-            shadow.querySelector('.container').classList.add('expanded');
+            base.classList.add('expanded');
+        }else{
+            base.classList.remove('expanded');
         }
         shadow.querySelector('.container .days').innerHTML = "";
         let month = this.getMonth(this.currentMonth);
@@ -310,11 +320,10 @@ class WebCCalendar extends HTMLElement
         let sundays = dates.shift();
         dates.push(sundays);
 
-        console.log(day, dates.length);
         if(day===0){
             day = 7;
         }
-        console.log(day, dates.length);
+
         for(day;day<dates.length;day++){
             dates[day].push({label:'', value:'', css:['disabled']});
         }
@@ -386,6 +395,7 @@ class WebCCalendar extends HTMLElement
     getTemplate(){
         return `<style>
     :host{--disable-color:#f4f4f4;--border-color:#eee;border-radius:5px;position:relative;user-select: none;display:flex;flex-direction: column;width:700px;background:#fff;box-shadow:0 0 3px rgba(0, 0, 0, .25);padding:0.9em;box-sizing: border-box;font-family: sans-serif;}
+    :host .webc-calendar{flex:1;display:flex;flex-direction: column;}
     .button{display:flex;cursor: pointer;width:30px;height:30px;border-radius: 50%;justify-content: center;align-items: center;border:solid 1px transparent;}
     .button:hover{background:rgba(32,33,36,0.039);border:solid 1px rgba(32,33,36,0.19);}
     header{display:flex;justify-content: start;align-items: center;flex:0 0 auto;margin-bottom:0.5em;}
@@ -393,6 +403,7 @@ class WebCCalendar extends HTMLElement
     header>div.picker{display:flex;align-items: center;}
     header>div.picker>div{display:flex;align-items: center;}
     header>div.picker .month{padding:.5em 0;margin-right:5px;}
+    header>div.picker .months{margin-right:5px;}
     header>div.picker .months .button{background:url('@svg') no-repeat center center;background-size:16px 16px;}
     header>div.picker .months .button.previous{transform:rotate(180deg);}
     header>div.picker .year{display:flex;align-items: center;}
@@ -433,10 +444,12 @@ class WebCCalendar extends HTMLElement
     .container.expanded>.days>.col.weeks>.week{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;padding:3px;}
 
 </style>
-<header><div class="button today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month">Mai</span> <span class="year"><label>2022</label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
+<div class="webc-calendar">
+<header><div class="button today" title="@date.formatted_today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month"></span> <span class="year"><label></label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
 <div class="container">
     <div class="labels"></div>
     <div class="days"></div>
+</div>
 </div>
 `;
     }
