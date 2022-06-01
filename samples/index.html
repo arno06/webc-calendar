@@ -34,6 +34,7 @@
     });
     document.querySelector('#expanded').addEventListener('change', function(e){
         calendar.setAttribute('expanded', e.currentTarget.checked?'true':'false');
+        calendar.style.height = e.currentTarget.checked?"100%":"auto";
     });
 </script>
 </body>
