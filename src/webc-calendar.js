@@ -443,13 +443,14 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col.weeks>.week{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;font-size:0.7em;box-sizing: border-box;padding:0 2px;width:16px;cursor:default;}
     .container.expanded>.days>.col.weeks>.week{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;padding:3px;}
 
+    @media screen and (max-width: 700px){
+        :host{width:100%;}
+    }
 </style>
-<div class="webc-calendar">
 <header><div class="button today" title="@date.formatted_today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month"></span> <span class="year"><label></label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
 <div class="container">
     <div class="labels"></div>
     <div class="days"></div>
-</div>
 </div>
 `;
     }
