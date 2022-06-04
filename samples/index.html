@@ -10,31 +10,37 @@
         body header, body footer{flex:0 0 auto;}
         body header{display:flex;justify-content: space-between;}
         body header{}
-        webc-calendar{width:100%;height:100%;}
+        body .container{display:flex;flex:1;}
+        body .container .secondary{flex:0;margin-right:1em;}
+        body .container .main{flex:1;}
+        webc-calendar{box-shadow: none;}
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
 <header>
-    <label for="expanded"><input id="expanded" type="checkbox" checked>&nbsp;Expanded</label>
-    <label>Date sélectionnée : <span></span></label>
+    <h1>Calendar</h1>
 </header>
-<!--<webc-calendar selected-dates="2022-05-26" multiple="true" expanded="true" format="YYYY-MM-DD" disabled-dates="2022-05-02;2022-05-16;2022-05-25" disabled-week-days="" id="test" events="2022-05-20:#ae00ff|#00ff00|#0000ff;2022-05-19:#ff0000|#00ff00" colors-scheme="today:#ffffff;todayBackground:#02c39a;border:#eee;hover:#fff;hoverBackground:#028090" date-max="2022-06-10" date-min="2022-05-01"></webc-calendar>-->
-<webc-calendar expanded="true" mode="single" format="YYYY-MM-DD" colors-scheme="today:#ffffff;todayBackground:#02c39a;border:#eee;hover:#fff;hoverBackground:#028090"></webc-calendar>
+<div class="container">
+    <div class="secondary">
+        <webc-calendar class="shrinked"></webc-calendar>
+    </div>
+    <div class="main">
+        <webc-calendar display="week" class="expanded"></webc-calendar>
+    </div>
+</div>
 <footer>
 
 </footer>
 <script>
-    let calendar = document.querySelector('webc-calendar');
-    calendar.addEventListener(WebCCalendar.EVENT_MONTH_CHANGED, function(e){
-        console.log(e);
+    let sec = document.querySelector('.container .secondary webc-calendar');
+    let main = document.querySelector('.container .main webc-calendar');
+
+    sec.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(pEvent){
+        main.setAttribute("current-date", pEvent.detail.value);
     });
-    calendar.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(e){
-        document.querySelector('header label span').innerHTML = e.detail.value;
-    });
-    document.querySelector('#expanded').addEventListener('change', function(e){
-        calendar.setAttribute('expanded', e.currentTarget.checked?'true':'false');
-        calendar.style.height = e.currentTarget.checked?"100%":"auto";
+    main.addEventListener(WebCCalendar.EVENT_DATE_CHANGED, function(pEvent){
+        sec.setAttribute('selected-dates', pEvent.detail.formattedCurrentDate);
     });
 </script>
 </body>

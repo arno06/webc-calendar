@@ -6,6 +6,7 @@ class WebCCalendar extends HTMLElement
     static EVENT_DAY_UNSELECTED = "day_unselected";
     static EVENT_SELECTION_UPDATED = "selection_updated";
     static EVENT_MONTH_CHANGED = "month_changed";
+    static EVENT_DATE_CHANGED = "date_changed";
 
     static Localization = {
     'today':'Aujourd\'hui',
@@ -19,18 +20,16 @@ class WebCCalendar extends HTMLElement
 
     // component attributes
     static get observedAttributes() {
-        return ['format', 'mode', 'disabled-dates', 'disabled-week-days', 'events', 'colors-scheme', 'expanded', 'date-min', 'date-max', 'selected-dates'];
+        return ['current-date','display', 'class', 'format', 'mode', 'disabled-dates', 'disabled-week-days', 'events', 'colors-scheme', 'date-min', 'date-max', 'selected-dates'];
     }
 
     constructor(){
         super();
-        let d = new Date();
         this.format = 'YYYY-MM-DD';
-        this.currentMonth = d.getMonth();
-        this.currentYear = d.getFullYear();
+        this.currentDate = new Date();
         this.disabledDates = [];
         this.disabledWeekDays = [];
-        this.expanded = false;
+        this.display = 'month';
         this.dateMin = null;
         this.dateMax = null;
         this.selectedDates = [];
@@ -46,7 +45,6 @@ class WebCCalendar extends HTMLElement
             'hover':'#000'
         };
         this.events = [];
-        this.formatDate(d);
     }
 
     attributeChangedCallback(pAttr, pOldValue, pNewValue){
@@ -54,6 +52,18 @@ class WebCCalendar extends HTMLElement
             return;
         }
         switch(pAttr){
+            case 'current-date':
+                this.currentDate = this.strToDate(pNewValue);
+                console.log(this.currentDate);
+                break;
+            case 'display':
+                if(['week', 'month'].indexOf(pNewValue)>-1){
+                    this.display = pNewValue;
+                }
+                break;
+            case "class":
+                this.renderLabels();
+                break;
             case "disabled-week-days":
                 this.disabledWeekDays = pNewValue.split(WebCCalendar.SEPARATOR).map(Number);
                 if(this.shadow){
@@ -84,9 +94,6 @@ class WebCCalendar extends HTMLElement
                     this.colors[p[0]] = p[1];
                 }
                 break;
-            case "expanded":
-                this[pAttr] = pNewValue==="true";
-                break;
             case "date-min":
                 this.dateMin = this.strToDate(pNewValue);
                 break;
@@ -99,11 +106,10 @@ class WebCCalendar extends HTMLElement
                     this.selectedDates = [this.selectedDates[0]];
                 }
                 let d = this.strToDate(this.selectedDates[0]);
-                this.currentMonth = d.getMonth();
-                this.currentYear = d.getFullYear();
+                this.currentDate = d;
                 break;
             case "mode":
-                if(['single', 'multiple', 'range'].indexOf(pNewValue)){
+                if(['single', 'multiple', 'range'].indexOf(pNewValue)>-1){
                     this.mode = pNewValue;
                 }
                 break;
@@ -122,27 +128,47 @@ class WebCCalendar extends HTMLElement
         }
         this.shadow.innerHTML = tpl;
         let ref = this;
-        this.shadow.querySelectorAll('header>div.picker .months.actions>.button').forEach(function(pButton){
-            pButton.addEventListener('click', ref.monthNavHandler.proxy(ref));
+        this.shadow.querySelectorAll('header>div.picker .main.actions>.button').forEach(function(pButton){
+            pButton.addEventListener('click', ref.mainNavHandler.proxy(ref));
         });
         this.shadow.querySelectorAll('header>div.picker .year .button').forEach(function(pButton){
             pButton.addEventListener('click', ref.yearNavHandler.proxy(ref));
         });
         this.shadow.querySelector('header>.button.today').addEventListener('click', this.todayClickedHandler.proxy(this));
+        this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
+        this.renderLabels();
+        this.render();
+    }
+
+    renderLabels(){
+        if(!this.shadow){
+            return;
+        }
         let labels = this.shadow.querySelector('.container .labels');
-        let shortLabels = !this.expanded || (labels.offsetWidth/7)<60;
+        labels.innerHTML = "";
+        let shortLabels = (labels.offsetWidth/7)<60;
+        let veryShortLabels = (labels.offsetWidth/7)<38;
         WebCCalendar.Localization.days.forEach(function(pDay){
             let div = document.createElement('div');
             div.classList.add('weekday');
             let l = pDay;
-            if(shortLabels){
+            if(veryShortLabels){
+                l = l[0];
+            }else if(shortLabels){
                 l = l.slice(0, 3)+'.';
             }
             div.innerHTML = l;
             labels.appendChild(div);
         });
-        this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
-        this.render();
+        let labelsNumbers = this.shadow.querySelector('.container .labels.numbers');
+        if(this.display==="week" && !labelsNumbers){
+            let days = document.createElement('div');
+            days.classList.add('labels');
+            days.classList.add('numbers');
+            this.shadow.querySelector('.container').insertBefore(days, this.shadow.querySelector('.container .days'));
+        }else if(this.display === "month" && labelsNumbers){
+            labelsNumbers.remove();
+        }
     }
 
     parseEvents(pDay){
@@ -152,30 +178,39 @@ class WebCCalendar extends HTMLElement
 
     yearNavHandler(pEvent){
         let direction = pEvent.currentTarget.classList.contains('previous')?-1:1;
-        this.currentYear += direction;
+        this.currentDate.setFullYear(this.currentDate.getFullYear()+direction);
         this.render();
-        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentDate:this.currentDate}}));
     }
 
     scrollHandler(pEvent){
         pEvent.preventDefault();
-        this.currentMonth += pEvent.deltaY>0?1:-1;
+        let direction = (pEvent.deltaY>0?1:-1);
+        this.handleNav(direction);
         this.render();
-        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
-
     }
 
-    monthNavHandler(pEvent){
+    mainNavHandler(pEvent){
         let direction = pEvent.currentTarget.classList.contains('previous')?-1:1;
-        this.currentMonth+=direction;
+        this.handleNav(direction);
+    }
+
+    handleNav(pDirection){
+        switch(this.display){
+            case "week":
+                this.currentDate.setDate(this.currentDate.getDate() + (pDirection *7));
+                break;
+            case "month":
+                this.currentDate.setMonth(this.currentDate.getMonth() + (pDirection));
+                break;
+        }
         this.render();
-        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentYear:this.currentYear, currentMonth:this.currentMonth}}));
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentDate:this.currentDate}}));
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_DATE_CHANGED, {composed:true, detail:{currentDate:this.currentDate, formattedCurrentDate:this.formatDate(this.currentDate)}}));
     }
 
     todayClickedHandler(e){
-        let d = new Date();
-        this.currentMonth = d.getMonth();
-        this.currentYear = d.getFullYear();
+        this.currentDate = new Date();
         this.render();
     }
 
@@ -183,59 +218,15 @@ class WebCCalendar extends HTMLElement
         if(!this.shadow){
             return;
         }
-        let ref = this;
-        let shadow = this.shadow;
-        let base = this.shadow.querySelector('.container');
-        if(this.expanded){
-            base.classList.add('expanded');
-        }else{
-            base.classList.remove('expanded');
+        this.shadow.querySelector('.container .days').innerHTML = "";
+        switch(this.display){
+            case "month":
+                this.renderMonth();
+                break;
+            case "week":
+                this.renderWeek();
+                break;
         }
-        shadow.querySelector('.container .days').innerHTML = "";
-        let month = this.getMonth(this.currentMonth);
-        let colWeeks = document.createElement('div');
-        colWeeks.classList.add('col');
-        colWeeks.classList.add('weeks');
-        month.weeks.forEach(function(pWeek){
-            let d = document.createElement('div');
-            d.classList.add('week');
-            d.innerHTML = pWeek;
-            colWeeks.appendChild(d);
-        });
-        shadow.querySelector('.container .days').appendChild(colWeeks);
-        month.dates.forEach(function(pDays){
-            let col = document.createElement('div');
-            col.classList.add('col');
-            pDays.forEach(function(pDay){
-                let d = document.createElement('div');
-                if(pDay.title){
-                    d.setAttribute("title", pDay.title);
-                }
-                d.classList.add('day');
-                d.setAttribute("data-value", pDay.value);
-                if(pDay.css.length>0){
-                    pDay.css.forEach((pCls)=>d.classList.add(pCls));
-                }
-                let s = document.createElement('span');
-                s.innerHTML = pDay.label;
-                d.appendChild(s);
-                d.addEventListener('click', ref.dayClickedHandler.proxy(ref));
-
-                if(ref.events[pDay.value]){
-                    let evts = document.createElement('div');
-                    evts.classList.add('events');
-                    ref.events[pDay.value].forEach(function(pColor){
-                        let ele = document.createElement('div');
-                        ele.style.backgroundColor = pColor;
-                        evts.appendChild(ele);
-                    });
-                    d.appendChild(evts);
-                }
-
-                col.appendChild(d);
-            });
-            shadow.querySelector('.container .days').appendChild(col);
-        });
         if(this.disabledWeekDays){
             this.disableWeekDays();
         }
@@ -279,39 +270,115 @@ class WebCCalendar extends HTMLElement
         return week;
     }
 
+    renderWeek(){
+        let infos = this.getCurrentWeek();
+        let month = infos.months.map((pMonth)=>WebCCalendar.Localization.months[pMonth]);
+        this.shadow.querySelector('header>div.picker .month').innerHTML = month.join(' - ');
+        let days = this.shadow.querySelector('.container .labels.numbers');
+        days.innerHTML = "";
+        let ref = this;
+        infos.dates.forEach(function(pDate){
+            let col = document.createElement('div');
+            col.classList.add('weekday');
+            col.classList.add('day');
+            let label = document.createElement('span');
+            if(pDate.css.length>0){
+                pDate.css.forEach((pCls)=>label.classList.add(pCls));
+            }
+            label.innerHTML = pDate.label;
+            col.appendChild(label);
+            days.appendChild(col);
+        });
+    }
+
+    getCurrentWeek(){
+        let d = this.currentDate.getDay();
+        d-=1;
+        if(d<0){
+            d = 6;
+        }
+        let cd = new Date(this.currentDate.getTime());
+        cd.setDate(cd.getDate() - d);
+        let dates = [];
+        let months = [];
+        for(let i = 0; i<7; i++){
+            dates.push(this.prepareDate(cd));
+            cd.setDate(cd.getDate()+1);
+            if(months.indexOf(cd.getMonth())===-1){
+                months.push(cd.getMonth());
+            }
+        }
+        return {
+            dates:dates,
+            week:this.getWeekNumber(this.currentDate),
+            months:months
+        };
+    }
+
+    renderMonth(){
+        let ref = this;
+        let month = this.getMonth(this.currentDate.getMonth());
+        let colWeeks = document.createElement('div');
+        colWeeks.classList.add('col');
+        colWeeks.classList.add('weeks');
+        month.weeks.forEach(function(pWeek){
+            let d = document.createElement('div');
+            d.classList.add('week');
+            d.innerHTML = pWeek;
+            colWeeks.appendChild(d);
+        });
+        this.shadow.querySelector('.container .days').appendChild(colWeeks);
+        month.dates.forEach(function(pDays){
+            let col = document.createElement('div');
+            col.classList.add('col');
+            pDays.forEach(function(pDay){
+                let d = document.createElement('div');
+                if(pDay.title){
+                    d.setAttribute("title", pDay.title);
+                }
+                d.classList.add('day');
+                d.setAttribute("data-value", pDay.value);
+                if(pDay.css.length>0){
+                    pDay.css.forEach((pCls)=>d.classList.add(pCls));
+                }
+                let s = document.createElement('span');
+                s.innerHTML = pDay.label;
+                d.appendChild(s);
+                d.addEventListener('click', ref.dayClickedHandler.proxy(ref));
+
+                if(ref.events[pDay.value]){
+                    let evts = document.createElement('div');
+                    evts.classList.add('events');
+                    ref.events[pDay.value].forEach(function(pColor){
+                        let ele = document.createElement('div');
+                        ele.style.backgroundColor = pColor;
+                        evts.appendChild(ele);
+                    });
+                    d.appendChild(evts);
+                }
+
+                col.appendChild(d);
+            });
+            ref.shadow.querySelector('.container .days').appendChild(col);
+        });
+    }
+
     getMonth(pMonth){
         let dates = [[], [], [], [], [], [], []];
         let d = new Date();
-        d.setFullYear(this.currentYear, pMonth, 1);
+        d.setFullYear(this.currentDate.getFullYear(), pMonth, 1);
         let month = d.getMonth();
         let d1 = d.getDay();
         let weeks = [];
 
-        this.currentYear = d.getFullYear();
-        this.currentMonth = month;
-        this.shadow.querySelector('header>div.picker .month').innerHTML = WebCCalendar.Localization.months[this.currentMonth];
-        this.shadow.querySelector('header>div.picker .year label').innerHTML = this.currentYear.toString();
+        this.currentDate = new Date(d.getTime());
+        this.shadow.querySelector('header>div.picker .month').innerHTML = WebCCalendar.Localization.months[this.currentDate.getMonth()];
+        this.shadow.querySelector('header>div.picker .year label').innerHTML = this.currentDate.getFullYear().toString();
 
-        let formattedToday = this.formatDate(new Date());
         let day;
         while(d.getMonth()===month){
             day = d.getDay();
-            let formattedDate = this.formatDate(d);
-            let cls = [];
-            let title = null;
-            if(formattedDate===formattedToday){
-                cls.push("today");
-                title = WebCCalendar.Localization.today;
-            }
-            if(this.disabledDates.indexOf(formattedDate)>-1
-                || (this.dateMin && d.getTime()<this.dateMin.getTime())
-                || (this.dateMax && d.getTime()>this.dateMax.getTime())){
-                cls.push("disabled");
-            }
-            if(this.selectedDates.indexOf(formattedDate)>-1){
-                cls.push("selected");
-            }
-            dates[day].push({label:d.getDate(), value:formattedDate, css:cls, title:title});
+            dates[day].push(this.prepareDate(d));
             if(day===1||weeks.length===0){
                 weeks.push(this.getWeekNumber(d));
             }
@@ -339,6 +406,26 @@ class WebCCalendar extends HTMLElement
             weeks:weeks,
             dates:dates
         };
+    }
+
+    prepareDate(pDate){
+        let formattedToday = this.formatDate(new Date());
+        let formattedDate = this.formatDate(pDate);
+        let cls = [];
+        let title = null;
+        if(formattedDate===formattedToday){
+            cls.push("today");
+            title = WebCCalendar.Localization.today;
+        }
+        if(this.disabledDates.indexOf(formattedDate)>-1
+            || (this.dateMin && pDate.getTime()<this.dateMin.getTime())
+            || (this.dateMax && pDate.getTime()>this.dateMax.getTime())){
+            cls.push("disabled");
+        }
+        if(this.selectedDates.indexOf(formattedDate)>-1){
+            cls.push("selected");
+        }
+        return {label:pDate.getDate(), value:formattedDate, css:cls, title:title};
     }
 
     disableWeekDays(){
@@ -403,9 +490,9 @@ class WebCCalendar extends HTMLElement
     header>div.picker{display:flex;align-items: center;}
     header>div.picker>div{display:flex;align-items: center;}
     header>div.picker .month{padding:.5em 0;margin-right:5px;}
-    header>div.picker .months{margin-right:5px;}
-    header>div.picker .months .button{background:url('@svg') no-repeat center center;background-size:16px 16px;}
-    header>div.picker .months .button.previous{transform:rotate(180deg);}
+    header>div.picker .main{margin-right:5px;}
+    header>div.picker .main .button{background:url('@svg') no-repeat center center;background-size:16px 16px;}
+    header>div.picker .main .button.previous{transform:rotate(180deg);}
     header>div.picker .year{display:flex;align-items: center;}
     header>div.picker .year label{padding:.5em 0;}
     header>div.picker .year .actions{margin-left:4px;}
@@ -424,30 +511,41 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
     .container>.days>.col.disabled>.day>span{color:#ccc;}
     .container>.days>.col>.day{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;cursor:pointer;}
-    .container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
-    .container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
+    .container>.labels.numbers>.weekday.day>span,.container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
+    .container>.labels.numbers>.weekday.day>span.today,.container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
     .container>.days>.col>.day:hover>span,
     .container>.days>.col>.day.selected>span{background:@hoverBackground;color:@hover;}
     .container>.days>.col>.day.disabled{pointer-events: none;background: @disableBackground;}
+    .container>.labels.numbers>.weekday.day{display:flex;justify-content: center;}
+    .container>.labels.numbers>.weekday.day>span{font-size:1.2em;color:#333;}
     
     .container>.days>.col>.day>.events{display:flex;position:absolute;bottom:3px;}
     .container>.days>.col>.day>.events>div{width:5px;height:5px;margin-right:3px;border-radius: 50%;}
     .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
     
-    .container.expanded>.days>.col{flex:1;display:flex;flex-direction: column;}
-    .container.expanded>.days>.col>.day{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;}
-    .container.expanded>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
-    .container.expanded>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
+    :host(.expanded){width:100%;height:100%;}
+    :host(.expanded) .container>.days>.col{flex:1;display:flex;flex-direction: column;}
+    :host(.expanded) .container>.days>.col.weeks{flex:0;}
+    :host(.expanded) .container>.days>.col>.day{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;}
+    :host(.expanded) .container>.days>.col>.day>.events{display:flex;flex-direction: column;width:100%;position: relative;padding:3px;box-sizing:border-box;}
+    :host(.expanded) .container>.days>.col>.day>.events>div{height:10px;margin-top:3px;width:100%;border-radius:3px;}
     
     .container>.days>.col.weeks{flex:0;width:20px;background:#eaeaea;color:#444;}
     .container>.days>.col.weeks>.week{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;font-size:0.7em;box-sizing: border-box;padding:0 2px;width:16px;cursor:default;}
-    .container.expanded>.days>.col.weeks>.week{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;padding:3px;}
+    :host(.expanded) .container>.days>.col.weeks>.week{min-height:100px;height:auto;flex:1;align-items: center;justify-content:start;flex-direction: column;padding:3px;}
+
+    :host(.shrinked){height:auto;width:265px;padding:.5em;}
+    :host(.shrinked) header .button.today{display:none;}
+    :host(.shrinked) .container>.days>.col>.day,
+    :host(.shrinked) .container>.days>.col.weeks>.week{height:30px;}
 
     @media screen and (max-width: 700px){
         :host{width:100%;}
+        header>div.picker .year .previous,
+        header>div.picker .year .next{opacity: 1;}
     }
 </style>
-<header><div class="button today" title="@date.formatted_today">@local.today</div><div class="picker"><div class="months actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month"></span> <span class="year"><label></label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
+<header><div class="button today" title="@date.formatted_today">@local.today</div><div class="picker"><div class="main actions"><span class="previous button"></span><span class="next button"></span></div><div><span class="month"></span> <span class="year"><label></label><span class="actions"><span class="next button"></span><span class="previous button"></span></span></span></div></div></header>
 <div class="container">
     <div class="labels"></div>
     <div class="days"></div>
