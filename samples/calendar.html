@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendar</title>
+    <script src="../src/webc-calendar.js"></script>
+    <style>
+        html,body{width:100%;height:100%;padding:0;margin:0;font-family: sans-serif;}
+        body{display:flex;flex-direction: column;}
+        body header, body footer{flex:0 0 auto;}
+        body .container{display:flex;flex:1;}
+        body .container .secondary{flex:0;margin-right:1em;}
+        body .container .main{flex:1;}
+        webc-calendar{box-shadow: none;}
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+<div class="container">
+    <div class="secondary">
+        <h1>Calendar</h1>
+        <webc-calendar class="shrinked"></webc-calendar>
+    </div>
+    <div class="main">
+        <webc-calendar display="week" class="expanded"></webc-calendar>
+    </div>
+</div>
+<footer>
+
+</footer>
+<script>
+    let sec = document.querySelector('.container .secondary webc-calendar');
+    let main = document.querySelector('.container .main webc-calendar');
+
+    sec.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(pEvent){
+        main.setAttribute("current-date", pEvent.detail.value);
+    });
+    main.addEventListener(WebCCalendar.EVENT_DATE_CHANGED, function(pEvent){
+        sec.setAttribute('selected-dates', pEvent.detail.formattedCurrentDate);
+    });
+</script>
+</body>
+</html>

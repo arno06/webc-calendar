@@ -54,7 +54,6 @@ class WebCCalendar extends HTMLElement
         switch(pAttr){
             case 'current-date':
                 this.currentDate = this.strToDate(pNewValue);
-                console.log(this.currentDate);
                 break;
             case 'display':
                 if(['week', 'month'].indexOf(pNewValue)>-1){
@@ -135,7 +134,7 @@ class WebCCalendar extends HTMLElement
             pButton.addEventListener('click', ref.yearNavHandler.proxy(ref));
         });
         this.shadow.querySelector('header>.button.today').addEventListener('click', this.todayClickedHandler.proxy(this));
-        this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
+        //this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
         this.renderLabels();
         this.render();
     }
@@ -274,20 +273,42 @@ class WebCCalendar extends HTMLElement
         let infos = this.getCurrentWeek();
         let month = infos.months.map((pMonth)=>WebCCalendar.Localization.months[pMonth]);
         this.shadow.querySelector('header>div.picker .month').innerHTML = month.join(' - ');
-        let days = this.shadow.querySelector('.container .labels.numbers');
+        let daysNumber = this.shadow.querySelector('.container .labels.numbers');
+        daysNumber.innerHTML = "";
+        let days = this.shadow.querySelector('.container .days');
         days.innerHTML = "";
+        let hoursLabels = document.createElement('div');
+        hoursLabels.classList.add('labels');
+        for(let i = 0; i<24; i++){
+            let h = document.createElement('div');
+            h.innerHTML = (i<10?'0':'')+(i)+':00';
+            hoursLabels.appendChild(h);
+        }
+        days.appendChild(hoursLabels);
+        let hours = document.createElement('div');
+        hours.classList.add('hours');
+        days.appendChild(hours);
         let ref = this;
         infos.dates.forEach(function(pDate){
-            let col = document.createElement('div');
-            col.classList.add('weekday');
-            col.classList.add('day');
-            let label = document.createElement('span');
+            let label = document.createElement('div');
+            label.classList.add('weekday');
+            label.classList.add('day');
+            let span = document.createElement('span');
             if(pDate.css.length>0){
-                pDate.css.forEach((pCls)=>label.classList.add(pCls));
+                pDate.css.forEach((pCls)=>span.classList.add(pCls));
             }
-            label.innerHTML = pDate.label;
-            col.appendChild(label);
-            days.appendChild(col);
+            span.innerHTML = pDate.label;
+            label.appendChild(span);
+            daysNumber.appendChild(label);
+
+            let col = document.createElement('div');
+            col.classList.add('col');
+            for(let i = 0; i<24; i++){
+                let h = document.createElement('div');
+                h.classList.add('hour');
+                col.appendChild(h);
+            }
+            hours.append(col);
         });
     }
 
@@ -506,7 +527,7 @@ class WebCCalendar extends HTMLElement
     .container>.labels{padding-left:16px;}
     .container>div>div{flex: 1;text-align: center;}
     .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
-    .container>.days{border-left:solid 1px @border;flex:1;}
+    .container>.days{border-left:solid 1px @border;flex:1;overflow-y: auto;}
     .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
     .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
     .container>.days>.col.disabled>.day>span{color:#ccc;}
@@ -522,6 +543,13 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col>.day>.events{display:flex;position:absolute;bottom:3px;}
     .container>.days>.col>.day>.events>div{width:5px;height:5px;margin-right:3px;border-radius: 50%;}
     .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
+    
+    .container>.days>.hours{min-height: -webkit-min-content;height:0px;display:flex;}
+    .container>.days>.hours>.col{flex:1;}
+    .container>.days>.labels>div, .container>.days>.hours>.col>.hour{height:50px;border-bottom: solid 1px @border;border-right:solid 1px @border;}
+    .container>.days>.labels{flex:0;height:0px;}
+    .container>.days>.labels>div{font-size:0.6em;border-bottom:1px solid transparent;padding:0 3px;}
+    .container>.days>.labels>div:last-of-type{border-bottom: solid 1px @border;}
     
     :host(.expanded){width:100%;height:100%;}
     :host(.expanded) .container>.days>.col{flex:1;display:flex;flex-direction: column;}
