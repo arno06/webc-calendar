@@ -11,13 +11,15 @@
 <body>
 <header>WebComponent-Calendar</header>
 <p>
-    <webc-calendar class="shrinked"></webc-calendar>
+    <webc-calendar mode="range"></webc-calendar>
 </p>
 <footer>
     footer
 </footer>
 <script>
-
+    document.querySelector('webc-calendar').addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(pEvent){
+        console.log(pEvent.detail.selectedDates);
+    });
 </script>
 </body>
 </html>

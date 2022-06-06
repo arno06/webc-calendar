@@ -134,7 +134,9 @@ class WebCCalendar extends HTMLElement
             pButton.addEventListener('click', ref.yearNavHandler.proxy(ref));
         });
         this.shadow.querySelector('header>.button.today').addEventListener('click', this.todayClickedHandler.proxy(this));
-        //this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
+        if(this.display === "month"){
+            this.shadow.querySelector('.container .days').addEventListener('wheel', this.scrollHandler.proxy(this));
+        }
         this.renderLabels();
         this.render();
     }
@@ -231,18 +233,81 @@ class WebCCalendar extends HTMLElement
         }
     }
 
+    dayOverHandler(e){
+        if(this.selectedDates.length!==1){
+            return;
+        }
+        let val = e.currentTarget.getAttribute("data-value");
+        if(val === this.selectedDates[0]){
+            return;
+        }
+        let sd = this.strToDate(this.selectedDates[0]);
+        let cd = this.strToDate(val);
+
+        this.shadow.querySelectorAll('.days .col .day').forEach(function(pEl){
+            if(pEl.classList.contains('in-range')){
+                pEl.classList.remove('in-range');
+                pEl.classList.remove('first');
+                pEl.classList.remove('last');
+            }
+        });
+
+        let selectedD = this.shadow.querySelector('.day[data-value="'+this.selectedDates[0]+'"]');//tbd : cas du jour sélectionné dans un autre mois
+        selectedD.classList.add('in-range');
+        let cls;
+        if(sd.getTime()>cd.getTime()){
+            selectedD.classList.add('last');
+            cls = "first";
+        }else{
+            selectedD.classList.add('first');
+            cls = "last";
+        }
+        e.currentTarget.classList.remove('in-range');
+        e.currentTarget.classList.add('in-range');
+        e.currentTarget.classList.add(cls);
+
+        let ref = this;
+        let fd = this.strToDate(this.shadow.querySelector('.day.first').getAttribute('data-value'));
+        let ld = this.strToDate(this.shadow.querySelector('.day.last').getAttribute('data-value'));
+        this.shadow.querySelectorAll('.days .col .day').forEach(function(pEl){
+            let d = ref.strToDate(pEl.getAttribute('data-value'));
+            if(fd.getTime()<d.getTime() && d.getTime()<ld.getTime()){
+                pEl.classList.add('in-range');
+            }
+        });
+    }
+
     dayClickedHandler(e){
         let val = e.currentTarget.getAttribute("data-value");
         let evt = null;
-        if(this.selectedDates.indexOf(val)>-1){
-            this.selectedDates.splice(this.selectedDates.indexOf(val), 1);
-            evt = WebCCalendar.EVENT_DAY_UNSELECTED;
-        }else{
-            if(!this.isMultiple()){
-                this.selectedDates = [];
-            }
-            this.selectedDates.push(val)
-            evt = WebCCalendar.EVENT_DAY_SELECTED;
+        switch(this.mode){
+            case "range":
+                if(this.selectedDates.length===2){
+                    this.selectedDates = [];
+                }
+                if(!this.selectedDates.length){
+                    this.selectedDates.push(val);
+                }else{
+                    if(this.strToDate(this.selectedDates[0]).getTime()>this.strToDate(val).getTime()){
+                        this.selectedDates.unshift(val);
+                    }else{
+                        this.selectedDates.push(val);
+                    }
+                }
+                evt = WebCCalendar.EVENT_DAY_SELECTED;
+                break;
+            default:
+                if(this.selectedDates.indexOf(val)>-1){
+                    this.selectedDates.splice(this.selectedDates.indexOf(val), 1);
+                    evt = WebCCalendar.EVENT_DAY_UNSELECTED;
+                }else{
+                    if(!this.isMultiple()){
+                        this.selectedDates = [];
+                    }
+                    this.selectedDates.push(val)
+                    evt = WebCCalendar.EVENT_DAY_SELECTED;
+                }
+                break;
         }
         this.render();
         let detail = {
@@ -366,6 +431,9 @@ class WebCCalendar extends HTMLElement
                 s.innerHTML = pDay.label;
                 d.appendChild(s);
                 d.addEventListener('click', ref.dayClickedHandler.proxy(ref));
+                if(ref.isRange()){
+                    d.addEventListener('mouseover', ref.dayOverHandler.proxy(ref));
+                }
 
                 if(ref.events[pDay.value]){
                     let evts = document.createElement('div');
@@ -445,6 +513,19 @@ class WebCCalendar extends HTMLElement
         }
         if(this.selectedDates.indexOf(formattedDate)>-1){
             cls.push("selected");
+        }
+        if(this.isRange()){
+            if(this.selectedDates.indexOf(formattedDate)>-1){
+                cls.push("in-range");
+                cls.push(this.selectedDates.indexOf(formattedDate)===0?"first":"last");
+            }
+            if(this.selectedDates.length===2){
+                let d1 = this.strToDate(this.selectedDates[0]);
+                let d2 = this.strToDate(this.selectedDates[1]);
+                if(d1.getTime()<pDate.getTime() && pDate.getTime()<d2.getTime()){
+                    cls.push("in-range");
+                }
+            }
         }
         return {label:pDate.getDate(), value:formattedDate, css:cls, title:title};
     }
@@ -531,7 +612,16 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
     .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
     .container>.days>.col.disabled>.day>span{color:#ccc;}
+    .container>.days>.col>.day>span{z-index:2;}
     .container>.days>.col>.day{position:relative;border-top:solid 1px @border;height:50px;display:flex;justify-content: center;align-items: center;cursor:pointer;}
+    .container>.days>.col>.day.in-range{}
+    .container>.days>.col>.day.in-range span{color:#444;}
+    .container>.days>.col>.day.in-range::before,
+    .container>.days>.col>.day.in-range::after{content:'';display:block;position:absolute;background:@hoverBackground;width:50%;height:20px;z-index:0;}
+    .container>.days>.col>.day.in-range::before{left:0;}
+    .container>.days>.col>.day.in-range::after{right:0;}
+    .container>.days>.col>.day.in-range.first::before{display:none;}
+    .container>.days>.col>.day.in-range.last::after{display:none;}
     .container>.labels.numbers>.weekday.day>span,.container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
     .container>.labels.numbers>.weekday.day>span.today,.container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
     .container>.days>.col>.day:hover>span,
