@@ -5,19 +5,30 @@
     <title>Calendar</title>
     <script src="../src/webc-calendar.js"></script>
     <style>
+        html, body{height:100%;padding:0;margin:0;width:100%;}
+        body{display:flex;flex-direction: column;}
+        body header, body footer{flex:0;}
+        body>p{flex:1;}
 
     </style>
 </head>
 <body>
-<header>WebComponent-Calendar</header>
+<header>WebComponent-Calendar
+    <p><label for="display">Affichage : <select id="display"><option value="shrinked">Mini</option><option selected value="">Normal</option><option value="expanded">Maxi</option></select></label></p>
+    <p><label for="mode">Mode : <select id="mode"><option value="single">1 Date</option><option value="multiple">N Dates</option><option value="range">Interval</option></select></label></p>
+</header>
 <p>
-    <webc-calendar mode="range"></webc-calendar>
+    <webc-calendar></webc-calendar>
 </p>
-<footer>
-    footer
-</footer>
 <script>
-    document.querySelector('webc-calendar').addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(pEvent){
+    let calendar = document.querySelector('webc-calendar');
+    document.querySelector('#display').addEventListener('change', function(pEvent){
+        calendar.className = pEvent.currentTarget.value;
+    });
+    document.querySelector('#mode').addEventListener('change', function(pEvent){
+        calendar.setAttribute("mode", pEvent.currentTarget.value);
+    });
+    calendar.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(pEvent){
         console.log(pEvent.detail.selectedDates);
     });
 </script>

@@ -108,6 +108,7 @@ class WebCCalendar extends HTMLElement
                 this.currentDate = d;
                 break;
             case "mode":
+                this.selectedDates = [];
                 if(['single', 'multiple', 'range'].indexOf(pNewValue)>-1){
                     this.mode = pNewValue;
                 }
