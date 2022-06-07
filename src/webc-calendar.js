@@ -64,11 +64,8 @@ class WebCCalendar extends HTMLElement
                 this.renderLabels();
                 break;
             case "disabled-week-days":
-                this.disabledWeekDays = pNewValue.split(WebCCalendar.SEPARATOR).map(Number);
-                if(this.shadow){
-                    this.disableWeekDays();
-                }
-                return;
+                this.disabledWeekDays = pNewValue.split(WebCCalendar.SEPARATOR).filter(pDay => pDay.length>0).map(Number);
+                break;
             case "disabled-dates":
                 this.disabledDates = pNewValue.split(WebCCalendar.SEPARATOR);
                 break;
@@ -229,7 +226,7 @@ class WebCCalendar extends HTMLElement
                 this.renderWeek();
                 break;
         }
-        if(this.disabledWeekDays){
+        if(this.disabledWeekDays && this.disabledWeekDays.length>0){
             this.disableWeekDays();
         }
     }
@@ -519,6 +516,9 @@ class WebCCalendar extends HTMLElement
             if(this.selectedDates.indexOf(formattedDate)>-1){
                 cls.push("in-range");
                 cls.push(this.selectedDates.indexOf(formattedDate)===0?"first":"last");
+                if(this.selectedDates[0]===this.selectedDates[1]){
+                    cls.push("last");
+                }
             }
             if(this.selectedDates.length===2){
                 let d1 = this.strToDate(this.selectedDates[0]);
@@ -533,7 +533,7 @@ class WebCCalendar extends HTMLElement
 
     disableWeekDays(){
         let ref = this;
-        this.shadow.querySelectorAll('.container .days .col').forEach(function(pCol, pIndex){
+        this.shadow.querySelectorAll('.container .days .col:not(.weeks)').forEach(function(pCol, pIndex){
             if(ref.disabledWeekDays.indexOf(pIndex)>-1){
                 pCol.classList.add('disabled');
             }else{
@@ -623,6 +623,7 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col>.day.in-range::after{right:0;}
     .container>.days>.col>.day.in-range.first::before{display:none;}
     .container>.days>.col>.day.in-range.last::after{display:none;}
+    .container>.days>.col>.day.in-range.first.last::after,.container>.days>.col>.day.in-range.first.last::before{display:block;}
     .container>.labels.numbers>.weekday.day>span,.container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
     .container>.labels.numbers>.weekday.day>span.today,.container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
     .container>.days>.col>.day:hover>span,
