@@ -333,6 +333,7 @@ class WebCCalendar extends HTMLElement
     }
 
     renderWeek(){
+        console.log("render");
         let infos = this.getCurrentWeek();
         let month = infos.months.map((pMonth)=>WebCCalendar.Localization.months[pMonth]);
         this.shadow.querySelector('header>div.picker .month').innerHTML = month.join(' - ');
@@ -352,6 +353,8 @@ class WebCCalendar extends HTMLElement
         hours.classList.add('hours');
         days.appendChild(hours);
         let ref = this;
+        let currentDate = new Date();
+        let p = currentDate.getHours() + ((currentDate.getMinutes() / 60));
         infos.dates.forEach(function(pDate){
             let label = document.createElement('div');
             label.classList.add('weekday');
@@ -366,6 +369,12 @@ class WebCCalendar extends HTMLElement
 
             let col = document.createElement('div');
             col.classList.add('col');
+            if(pDate.css.indexOf('today')>-1){
+                let hourIndicator = document.createElement('div');
+                hourIndicator.classList.add('hour-indicator');
+                hourIndicator.style.top = (p*51) + "px";
+                col.appendChild(hourIndicator);
+            }
             for(let i = 0; i<24; i++){
                 let h = document.createElement('div');
                 h.classList.add('hour');
@@ -373,6 +382,8 @@ class WebCCalendar extends HTMLElement
             }
             hours.append(col);
         });
+        let daysContainer = this.shadow.querySelector('.container>.days');
+        daysContainer.scrollTop = (p*51) - 100;
     }
 
     getCurrentWeek(){
@@ -637,8 +648,10 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col>.day>.events>div:last-of-type{margin:0;}
     
     .container>.days>.hours{min-height: -webkit-min-content;height:0px;display:flex;}
-    .container>.days>.hours>.col{flex:1;}
+    .container>.days>.hours>.col{flex:1;position:relative;}
     .container>.days>.labels>div, .container>.days>.hours>.col>.hour{height:50px;border-bottom: solid 1px @border;border-right:solid 1px @border;}
+    .container>.days>.hours>.col>.hour-indicator{position:absolute;border-top:red solid 1px;width:100%;}
+    .container>.days>.hours>.col>.hour-indicator:before{content:'';display:inline-block;width:10px;height:10px;border-radius: 100%;background:red;position:absolute;left:0;top:0;transform: translate(-50%, -50%);}
     .container>.days>.labels{flex:0;height:0px;}
     .container>.days>.labels>div{font-size:0.6em;border-bottom:1px solid transparent;padding:0 3px;}
     .container>.days>.labels>div:last-of-type{border-bottom: solid 1px @border;}
