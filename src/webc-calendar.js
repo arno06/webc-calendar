@@ -10,10 +10,10 @@ class WebCCalendar extends HTMLElement
     static EVENT_DATE_CHANGED = "date_changed";
 
     static Localization = {
-    'today':'Aujourd\'hui',
-    'days':['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
-    'months':['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
-};
+        'today':'Aujourd\'hui',
+        'days':['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
+        'months':['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+    };
 
     static #ARROW = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 330 330"><path d="M250.606,154.389l-150-149.996c-5.857-5.858-15.355-5.858-21.213,0.001 c-5.857,5.858-5.857,15.355,0.001,21.213l139.393,139.39L79.393,304.394c-5.857,5.858-5.857,15.355,0.001,21.213 C82.322,328.536,86.161,330,90,330s7.678-1.464,10.607-4.394l149.999-150.004c2.814-2.813,4.394-6.628,4.394-10.606 C255,161.018,253.42,157.202,250.606,154.389z"/></svg>';
 
@@ -145,7 +145,7 @@ class WebCCalendar extends HTMLElement
         }
         switch(pAttr){
             case 'current-date':
-                this.currentDate = this.#strToDate(pNewValue);
+                this.currentDate = this.strToDate(pNewValue);
                 break;
             case 'display':
                 if(['week', 'month'].indexOf(pNewValue)>-1){
@@ -183,17 +183,17 @@ class WebCCalendar extends HTMLElement
                 }
                 break;
             case "date-min":
-                this.dateMin = this.#strToDate(pNewValue);
+                this.dateMin = this.strToDate(pNewValue);
                 break;
             case "date-max":
-                this.dateMax = this.#strToDate(pNewValue);
+                this.dateMax = this.strToDate(pNewValue);
                 break;
             case "selected-dates":
                 this.selectedDates = pNewValue.split(WebCCalendar.#SEPARATOR);
                 if(!this.isMultiple() && this.selectedDates.length>1){
                     this.selectedDates = [this.selectedDates[0]];
                 }
-                let d = this.#strToDate(this.selectedDates[0]);
+                let d = this.strToDate(this.selectedDates[0]);
                 this.currentDate = d;
                 break;
             case "mode":
@@ -209,7 +209,7 @@ class WebCCalendar extends HTMLElement
     connectedCallback(){
         this.shadow = this.attachShadow({mode: 'closed'});
         let tpl = WebCCalendar.#TEMPLATE;
-        tpl = tpl.replaceAll('@date.formatted_today', this.#formatDate(new Date()));
+        tpl = tpl.replaceAll('@date.formatted_today', this.dateToStr(new Date()));
         tpl = tpl.replaceAll('@local.today', WebCCalendar.Localization.today);
         tpl = tpl.replaceAll('@svg', WebCCalendar.#ARROW);
         for(let l in this.colors){
@@ -299,7 +299,7 @@ class WebCCalendar extends HTMLElement
         }
         this.#render();
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentDate:this.currentDate}}));
-        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_DATE_CHANGED, {composed:true, detail:{currentDate:this.currentDate, formattedCurrentDate:this.#formatDate(this.currentDate)}}));
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_DATE_CHANGED, {composed:true, detail:{currentDate:this.currentDate, formattedCurrentDate:this.dateToStr(this.currentDate)}}));
     }
 
     #todayClickedHandler(e){
@@ -317,7 +317,7 @@ class WebCCalendar extends HTMLElement
                 this.#renderMonth();
                 break;
             case "week":
-                this.renderWeek();
+                this.#renderWeek();
                 break;
         }
         if(this.disabledWeekDays && this.disabledWeekDays.length>0){
@@ -333,8 +333,8 @@ class WebCCalendar extends HTMLElement
         if(val === this.selectedDates[0]){
             return;
         }
-        let sd = this.#strToDate(this.selectedDates[0]);
-        let cd = this.#strToDate(val);
+        let sd = this.strToDate(this.selectedDates[0]);
+        let cd = this.strToDate(val);
 
         this.shadow.querySelectorAll('.days .col .day').forEach(function(pEl){
             if(pEl.classList.contains('in-range')){
@@ -359,10 +359,10 @@ class WebCCalendar extends HTMLElement
         e.currentTarget.classList.add(cls);
 
         let ref = this;
-        let fd = this.#strToDate(this.shadow.querySelector('.day.first').getAttribute('data-value'));
-        let ld = this.#strToDate(this.shadow.querySelector('.day.last').getAttribute('data-value'));
+        let fd = this.strToDate(this.shadow.querySelector('.day.first').getAttribute('data-value'));
+        let ld = this.strToDate(this.shadow.querySelector('.day.last').getAttribute('data-value'));
         this.shadow.querySelectorAll('.days .col .day').forEach(function(pEl){
-            let d = ref.#strToDate(pEl.getAttribute('data-value'));
+            let d = ref.strToDate(pEl.getAttribute('data-value'));
             if(fd.getTime()<d.getTime() && d.getTime()<ld.getTime()){
                 pEl.classList.add('in-range');
             }
@@ -383,7 +383,7 @@ class WebCCalendar extends HTMLElement
                 if(!this.selectedDates.length){
                     this.selectedDates.push(val);
                 }else{
-                    if(this.#strToDate(this.selectedDates[0]).getTime()>this.#strToDate(val).getTime()){
+                    if(this.strToDate(this.selectedDates[0]).getTime()>this.strToDate(val).getTime()){
                         this.selectedDates.unshift(val);
                     }else{
                         this.selectedDates.push(val);
@@ -414,9 +414,8 @@ class WebCCalendar extends HTMLElement
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_SELECTION_UPDATED, {composed:true, detail:detail}));
     }
 
-    renderWeek(){
-        console.log("render");
-        let infos = this.getCurrentWeek();
+    #renderWeek(){
+        let infos = this.#getCurrentWeek();
         let month = infos.months.map((pMonth)=>WebCCalendar.Localization.months[pMonth]);
         this.shadow.querySelector('header>div.picker .month').innerHTML = month.join(' - ');
         let daysNumber = this.shadow.querySelector('.container .labels.numbers');
@@ -467,7 +466,7 @@ class WebCCalendar extends HTMLElement
         daysContainer.scrollTop = (p*51) - 100;
     }
 
-    getCurrentWeek(){
+    #getCurrentWeek(){
         let d = this.currentDate.getDay();
         d-=1;
         if(d<0){
@@ -589,8 +588,8 @@ class WebCCalendar extends HTMLElement
     }
 
     #prepareDate(pDate){
-        let formattedToday = this.#formatDate(new Date());
-        let formattedDate = this.#formatDate(pDate);
+        let formattedToday = this.dateToStr(new Date());
+        let formattedDate = this.dateToStr(pDate);
         let cls = [];
         let title = null;
         if(formattedDate===formattedToday){
@@ -614,8 +613,8 @@ class WebCCalendar extends HTMLElement
                 }
             }
             if(this.selectedDates.length===2){
-                let d1 = this.#strToDate(this.selectedDates[0]);
-                let d2 = this.#strToDate(this.selectedDates[1]);
+                let d1 = this.strToDate(this.selectedDates[0]);
+                let d2 = this.strToDate(this.selectedDates[1]);
                 if(d1.getTime()<pDate.getTime() && pDate.getTime()<d2.getTime()){
                     cls.push("in-range");
                 }
@@ -635,7 +634,7 @@ class WebCCalendar extends HTMLElement
         });
     }
 
-    #formatDate(pDate){
+    dateToStr(pDate){
         let parts = {
             'YYYY':pDate.getUTCFullYear(),
             'MM':pDate.getMonth() + 1,
@@ -655,7 +654,7 @@ class WebCCalendar extends HTMLElement
         return val;
     }
 
-    #strToDate(pStr){
+    strToDate(pStr){
         let y = pStr.slice(this.format.indexOf('YYYY'), 4);
         let m = pStr.slice(this.format.indexOf('MM'), this.format.indexOf('MM')+2);
         let d = pStr.slice(this.format.indexOf('DD'), this.format.indexOf('DD')+2);
