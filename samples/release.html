@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendar</title>
+    <style>
+        html,body{width:100%;height:100%;padding:0;margin:0;font-family: sans-serif;}
+        body{display:flex;flex-direction: column;}
+        body header, body footer{flex:0 0 auto;}
+        body .container{display:flex;flex:1;}
+        .months{display:flex;flex-wrap: nowrap;}
+        .months>div{flex:0 0 auto;width:20px;height:20px;display:flex;align-items: center;justify-content: center;font-size:8px;}
+        .weekend{background:#999;}
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+<div class="container">
+    <div class="months">
+
+    </div>
+</div>
+<footer>
+
+</footer>
+<script>
+    (function(){
+
+        function init(){
+            let d = new Date(2023,0,1);
+            while(d.getFullYear()<2024){
+                let day = document.createElement('div');
+                day.innerHTML = d.getDate();
+                document.querySelector('.months').appendChild(day);
+                day.classList.add((d.getDay()===6 || d.getDay()===0) ?'weekend':'weekday');
+                d.setDate(d.getDate()+1);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    })();
+</script>
+</body>
+</html>
