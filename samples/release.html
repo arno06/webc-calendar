@@ -8,15 +8,20 @@
         body{display:flex;flex-direction: column;}
         body header, body footer{flex:0 0 auto;}
         body .container{display:flex;flex:1;}
-        .months{display:flex;flex-wrap: nowrap;}
-        .months>div{flex:0 0 auto;width:20px;height:20px;display:flex;align-items: center;justify-content: center;font-size:8px;}
-        .weekend{background:#999;}
+        .calendar{display:flex;flex-wrap: nowrap;}
+        .calendar>div.month{border-right: 1px solid #eee;display:flex;flex-direction: column;}
+        .calendar>div.month>h4{text-align: center;}
+        .calendar>div.month>div{display:flex;flex-wrap: nowrap;flex:1 1 auto;justify-content: start;}
+        .calendar>div.month>div>div.week{border-right:solid 1px #777777;}
+        .calendar>div.month>div>div>div{flex:0 0 auto;width:20px;height:20px;display:flex;align-items: center;justify-content: center;font-size:10px;}
+        .weekend{background:#eee;}
+        .sprint{top:100px;height:20px;background:#777;position: absolute;color:#fff;display:flex;align-items:center;justify-content: center;}
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
 <div class="container">
-    <div class="months">
+    <div class="calendar">
 
     </div>
 </div>
@@ -26,13 +31,51 @@
 <script>
     (function(){
 
+        const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
         function init(){
             let d = new Date(2023,0,1);
+            let week;
+            let sprint = false;
+            let sprint_count = 1;
             while(d.getFullYear()<2024){
+                let container = document.querySelector('.month_'+d.getMonth());
+                if(!container){
+                    const parent = document.createElement('div');
+                    parent.classList.add('month');
+                    const label = document.createElement('h4');
+                    label.innerText = months[d.getMonth()];
+                    parent.appendChild(label);
+                    container = document.createElement('div');
+                    container.classList.add('month_'+d.getMonth());
+                    parent.appendChild(container);
+                    document.querySelector('.calendar').appendChild(parent);
+                }
                 let day = document.createElement('div');
-                day.innerHTML = d.getDate();
-                document.querySelector('.months').appendChild(day);
                 day.classList.add((d.getDay()===6 || d.getDay()===0) ?'weekend':'weekday');
+                if(d.getDay()===0){
+                    day.classList.add('week');
+                }
+                let dayNumber = document.createElement('div');
+                dayNumber.innerHTML = d.getDate();
+                day.appendChild(dayNumber);
+                container.appendChild(day);
+
+                if(d.getDay() === 1){
+                    if(!sprint){
+                        let s = document.createElement('div');
+                        s.classList.add('sprint');
+                        s.style.left = (day.getBoundingClientRect().x)+"px";
+                        s.style.width = (12 * 20)+"px";
+                        s.innerHTML = d.getFullYear().toString().slice(2, 4)+"."+(sprint_count<10?"0"+sprint_count:sprint_count);
+                        document.querySelector('.container').appendChild(s);
+                        sprint = true;
+                        sprint_count++;
+                    }else{
+                        sprint = false;
+                    }
+                }
+
                 d.setDate(d.getDate()+1);
             }
         }
