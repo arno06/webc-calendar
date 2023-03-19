@@ -1,5 +1,4 @@
 NodeList.prototype.forEach = NodeList.prototype.forEach||Array.prototype.forEach;
-Function.prototype.proxy = Function.prototype.proxy||function(pInstance) {let ref = this;return function(){ref.apply(pInstance, arguments);};};
 class WebCCalendar extends HTMLElement
 {
     static #TOUCH_CAPABLE = ("ontouchend" in document);
@@ -8,6 +7,8 @@ class WebCCalendar extends HTMLElement
     static EVENT_SELECTION_UPDATED = "selection_updated";
     static EVENT_MONTH_CHANGED = "month_changed";
     static EVENT_DATE_CHANGED = "date_changed";
+
+    static #WEEK_HOURS_HEIGHT = 51;
 
     static Localization = {
         'today':'Aujourd\'hui',
@@ -30,19 +31,22 @@ class WebCCalendar extends HTMLElement
     header>div.picker .main{margin-right:5px;}
     header>div.picker .main .button{background:url('@svg') no-repeat center center;background-size:16px 16px;}
     header>div.picker .main .button.previous{transform:rotate(180deg);}
+    header>div.picker .main .button:hover{background:#efefef url('@svg') no-repeat center center;border-color:transparent;background-size:16px 16px;}
     header>div.picker .year{display:flex;align-items: center;}
     header>div.picker .year label{padding:.5em 0;}
     header>div.picker .year .actions{margin-left:4px;}
     header>div.picker .year .previous,
     header>div.picker .year .next{background:url('@svg') no-repeat 3px 3px;background-size:10px 10px;transform:rotate(90deg);display:flex;justify-content:center;align-items:center;width:16px;height:16px;font-size:0.8em;text-align: center;opacity: 0;transition:opacity .3s;padding-left:0;padding-right:0;}
     header>div.picker .year .next{transform:rotate(-90deg);}
+    header>div.picker .year .previous:hover,
+    header>div.picker .year .next:hover{background:#efefef url('@svg') no-repeat 3px 3px;border-color:transparent;background-size:10px 10px;}
     header>div.picker .year:hover .previous,
     header>div.picker .year:hover .next{opacity: 1;}
     .container{flex: 1 1 auto;background:#fff;display:flex;flex-direction: column;}
     .container>div{display:flex;justify-content: space-between;}
     .container>.labels{padding-left:16px;}
     .container>div>div{flex: 1;text-align: center;}
-    .container>div>div.weekday{font-size:0.7em;padding:5px 0;}
+    .container>div>div.weekday{font-size:0.7em;padding:5px 0 2px;}
     .container>.days{border-left:solid 1px @border;flex:1;overflow-y: auto;}
     .container>.days>.col{border-right:solid 1px @border;border-bottom:solid 1px @border;}
     .container>.days>.col.disabled{background: @disableBackground;pointer-events: none;}
@@ -58,12 +62,12 @@ class WebCCalendar extends HTMLElement
     .container>.days>.col>.day.in-range.first::before{display:none;}
     .container>.days>.col>.day.in-range.last::after{display:none;}
     .container>.days>.col>.day.in-range.first.last::after,.container>.days>.col>.day.in-range.first.last::before{display:block;}
-    .container>.labels.numbers>.weekday.day>span,.container>.days>.col>.day>span{font-size:.9em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
+    .container>.labels.numbers>.weekday.day>span,.container>.days>.col>.day>span{font-size:.8em;color:#aaa;display:flex;justify-content: center;align-items: center;width:30px;height:30px;border-radius:50%;transition:all .3s;}
     .container>.labels.numbers>.weekday.day>span.today,.container>.days>.col>.day.today>span{background:@todayBackground;color:@today;}
     .container>.days>.col>.day:hover>span,
     .container>.days>.col>.day.selected>span{background:@hoverBackground;color:@hover;}
     .container>.days>.col>.day.disabled{pointer-events: none;background: @disableBackground;}
-    .container>.labels.numbers>.weekday.day{display:flex;justify-content: center;}
+    .container>.labels.numbers>.weekday.day{display:flex;justify-content: center;padding:0 0 5px;}
     .container>.labels.numbers>.weekday.day>span{font-size:1.2em;color:#333;}
     
     .container>.days>.col>.day>.events{display:flex;position:absolute;bottom:3px;}
@@ -72,8 +76,9 @@ class WebCCalendar extends HTMLElement
     
     .container>.days>.hours{min-height: -webkit-min-content;height:0px;display:flex;}
     .container>.days>.hours>.col{flex:1;position:relative;}
+    .container>.days>.hours>.col>.event{text-align: left;border:solid 1px white;box-sizing: border-box;padding:0.2em;border-radius:4px;}
     .container>.days>.labels>div, .container>.days>.hours>.col>.hour{height:50px;border-bottom: solid 1px @border;border-right:solid 1px @border;}
-    .container>.days>.hours>.col>.hour-indicator{position:absolute;border-top:red solid 1px;width:100%;}
+    .container>.days>.hours>.col>.hour-indicator{position:absolute;border-top:red solid 1px;width:100%;z-index:10;}
     .container>.days>.hours>.col>.hour-indicator:before{content:'';display:inline-block;width:10px;height:10px;border-radius: 100%;background:red;position:absolute;left:0;top:0;transform: translate(-50%, -50%);}
     .container>.days>.labels{flex:0;height:0;}
     .container>.days>.labels>div{font-size:0.6em;border-bottom:1px solid transparent;padding:0 3px;}
@@ -137,6 +142,8 @@ class WebCCalendar extends HTMLElement
             'hover':'#000'
         };
         this.events = [];
+        this._mouseUpHandler = this.#hourMouseUpHandler.bind(this);
+        this._mouseMoveHandler = this.#hourMouseMoveHandler.bind(this);
     }
 
     attributeChangedCallback(pAttr, pOldValue, pNewValue){
@@ -162,11 +169,13 @@ class WebCCalendar extends HTMLElement
                 this.disabledDates = pNewValue.split(WebCCalendar.#SEPARATOR);
                 break;
             case "events":
-                let parsed = pNewValue.split(WebCCalendar.#SEPARATOR).map(this.parseEvents);
+                let events = JSON.parse(pNewValue)||[];
                 this.events = {};
-                let ref = this;
-                parsed.forEach(function(pInfo){
-                    ref.events[pInfo.date] = pInfo.events;
+                events.forEach((pEvent)=>{
+                    if(!this.events[pEvent.date]){
+                        this.events[pEvent.date] = [];
+                    }
+                    this.events[pEvent.date].push(pEvent);
                 });
                 break;
             case "format":
@@ -216,17 +225,16 @@ class WebCCalendar extends HTMLElement
             tpl = tpl.replaceAll('@'+l, this.colors[l]);
         }
         this.shadow.innerHTML = tpl;
-        let ref = this;
         let evt = WebCCalendar.#TOUCH_CAPABLE?'touchend':'click';
-        this.shadow.querySelectorAll('header>div.picker .main.actions>.button').forEach(function(pButton){
-            pButton.addEventListener(evt, ref.#mainNavHandler.proxy(ref));
+        this.shadow.querySelectorAll('header>div.picker .main.actions>.button').forEach((pButton)=>{
+            pButton.addEventListener(evt, this.#mainNavHandler.bind(this));
         });
-        this.shadow.querySelectorAll('header>div.picker .year .button').forEach(function(pButton){
-            pButton.addEventListener(evt, ref.#yearNavHandler.proxy(ref));
+        this.shadow.querySelectorAll('header>div.picker .year .button').forEach((pButton)=>{
+            pButton.addEventListener(evt, this.#yearNavHandler.bind(this));
         });
-        this.shadow.querySelector('header>.button.today').addEventListener(evt, this.#todayClickedHandler.proxy(this));
+        this.shadow.querySelector('header>.button.today').addEventListener(evt, this.#todayClickedHandler.bind(this));
         if(this.display === "month"){
-            this.shadow.querySelector('.container .days').addEventListener('wheel', this.#scrollHandler.proxy(this));
+            this.shadow.querySelector('.container .days').addEventListener('wheel', this.#scrollHandler.bind(this));
         }
         this.#renderLabels();
         this.#render();
@@ -240,7 +248,7 @@ class WebCCalendar extends HTMLElement
         labels.innerHTML = "";
         let shortLabels = (labels.offsetWidth/7)<60;
         let veryShortLabels = (labels.offsetWidth/7)<38;
-        WebCCalendar.Localization.days.forEach(function(pDay){
+        WebCCalendar.Localization.days.forEach((pDay)=>{
             let div = document.createElement('div');
             div.classList.add('weekday');
             let l = pDay;
@@ -261,11 +269,6 @@ class WebCCalendar extends HTMLElement
         }else if(this.display === "month" && labelsNumbers){
             labelsNumbers.remove();
         }
-    }
-
-    parseEvents(pDay){
-        let parts = pDay.split(':');
-        return {date:parts[0], events:parts[1].split('|')};
     }
 
     #yearNavHandler(pEvent){
@@ -302,7 +305,7 @@ class WebCCalendar extends HTMLElement
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_DATE_CHANGED, {composed:true, detail:{currentDate:this.currentDate, formattedCurrentDate:this.dateToStr(this.currentDate)}}));
     }
 
-    #todayClickedHandler(e){
+    #todayClickedHandler(){
         this.currentDate = new Date();
         this.#render();
     }
@@ -336,7 +339,7 @@ class WebCCalendar extends HTMLElement
         let sd = this.strToDate(this.selectedDates[0]);
         let cd = this.strToDate(val);
 
-        this.shadow.querySelectorAll('.days .col .day').forEach(function(pEl){
+        this.shadow.querySelectorAll('.days .col .day').forEach((pEl)=>{
             if(pEl.classList.contains('in-range')){
                 pEl.classList.remove('in-range');
                 pEl.classList.remove('first');
@@ -361,7 +364,7 @@ class WebCCalendar extends HTMLElement
         let ref = this;
         let fd = this.strToDate(this.shadow.querySelector('.day.first').getAttribute('data-value'));
         let ld = this.strToDate(this.shadow.querySelector('.day.last').getAttribute('data-value'));
-        this.shadow.querySelectorAll('.days .col .day').forEach(function(pEl){
+        this.shadow.querySelectorAll('.days .col .day').forEach((pEl)=>{
             let d = ref.strToDate(pEl.getAttribute('data-value'));
             if(fd.getTime()<d.getTime() && d.getTime()<ld.getTime()){
                 pEl.classList.add('in-range');
@@ -435,7 +438,7 @@ class WebCCalendar extends HTMLElement
         days.appendChild(hours);
         let currentDate = new Date();
         let p = currentDate.getHours() + ((currentDate.getMinutes() / 60));
-        infos.dates.forEach(function(pDate){
+        infos.dates.forEach((pDate)=>{
             let label = document.createElement('div');
             label.classList.add('weekday');
             label.classList.add('day');
@@ -457,13 +460,111 @@ class WebCCalendar extends HTMLElement
             }
             for(let i = 0; i<24; i++){
                 let h = document.createElement('div');
+                h.setAttribute("data-value", i.toString());
                 h.classList.add('hour');
                 col.appendChild(h);
+                this.#handleSelectHours(h);
             }
             hours.append(col);
+
+            if(this.events[pDate.value]){
+                let events = this.events[pDate.value];
+                events.forEach((pEvent)=>{
+                    let w = 95;
+                    let existing = this.shadow.querySelectorAll('.event[data-startAt="'+pEvent.date+"@"+pEvent.startAt+'"]');
+                    w = w / (existing.length+1);
+                    existing.forEach((pElement, pIndex)=>{
+                        pElement.style.width = w+"%";
+                        pElement.style.left = (pIndex * w)+"%";
+                    });
+                    let [hour, min] = pEvent.startAt.split(":").map(Number);
+                    let p = hour + ((min / 60));
+                    let d = document.createElement('div');
+                    d.setAttribute("data-startAt", pEvent.date+"@"+pEvent.startAt);
+                    d.classList.add("event");
+                    d.style.cssText = pEvent.style;
+                    d.style.position = "absolute";
+                    d.style.top = ((p*WebCCalendar.#WEEK_HOURS_HEIGHT)-1)+"px";
+                    d.style.height = (((pEvent.duration/60)*WebCCalendar.#WEEK_HOURS_HEIGHT)).toString()+"px";
+                    d.style.width = w+"%";
+                    d.style.left = ((existing.length) * w)+"%";
+                    d.innerHTML = pEvent.title;
+                    col.append(d);
+                });
+            }
         });
         let daysContainer = this.shadow.querySelector('.container>.days');
-        daysContainer.scrollTop = (p*51) - 100;
+        daysContainer.scrollTop = (p*WebCCalendar.#WEEK_HOURS_HEIGHT) - 100;
+    }
+
+    #handleSelectHours(pElement){
+        pElement.addEventListener('mousedown', this.#hourMouseDownHandler.bind(this));
+    }
+
+    #hourMouseDownHandler(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        document.addEventListener('mouseup', this._mouseUpHandler);
+        document.addEventListener('mousemove', this._mouseMoveHandler);
+        let h = e.currentTarget;
+        let col = h.parentNode;
+        let div = document.createElement('div');
+        div.classList.add('new_event', 'event');
+        div.style.cssText = 'position:absolute;height:26px;width:98%;left:0;z-index:10;background:#ff0000;';
+        col.appendChild(div);
+        let localY = e.clientY - h.getBoundingClientRect().top;
+        let ty = (Math.floor(localY / (Math.floor(WebCCalendar.#WEEK_HOURS_HEIGHT/2)))) * (WebCCalendar.#WEEK_HOURS_HEIGHT/2);
+        let baseTop = (h.getBoundingClientRect().top - col.getBoundingClientRect().top + (ty));
+        div.setAttribute("data-top", baseTop.toString());
+        div.setAttribute("data-value", h.getAttribute("data-value"));
+        div.style.top = (baseTop)+"px";
+    }
+
+    #hourMouseMoveHandler(e){
+        let step = WebCCalendar.#WEEK_HOURS_HEIGHT>>1;
+        let evtEl = this.shadow.querySelector('.new_event');
+        let baseTop = Number(evtEl.getAttribute("data-top"));
+        let scrollY = this.shadow.querySelector('.container>.days').scrollTop - this.shadow.querySelector('.container>.days').getBoundingClientRect().top;
+        let currentY = scrollY+e.clientY;
+        let h = currentY - baseTop;
+        let d;
+        if(currentY > baseTop){
+            d = Math.round(h / step);
+            h = (d * (step+0.5));
+            h = Math.max(h, step + .5);
+            evtEl.style.height = (h)+"px";
+            evtEl.style.top = (baseTop)+"px";
+        }else{
+            d = Math.floor(h / step);
+            h = (d * (step+0.5));
+            evtEl.style.top = (baseTop+h)+"px";
+            evtEl.style.height = Math.abs(h)+"px";
+        }
+
+        let half = d%2!==0;
+        let hours = Math.floor(d/2);
+        let base_hours = Number(evtEl.getAttribute("data-value"));
+        let value_h = base_hours+hours;
+
+
+        let toHours = this.#formatHours(value_h, half?30:0);
+        let fromHours = this.#formatHours(base_hours, 0);
+
+        if(currentY>baseTop){
+            evtEl.innerHTML = fromHours+' à '+toHours;
+        }else{
+            evtEl.innerHTML = toHours+' à '+fromHours;
+        }
+    }
+
+    #hourMouseUpHandler(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        this.shadow.querySelector('.new_event').remove();
+        document.removeEventListener('mouseup', this._mouseUpHandler);
+        document.removeEventListener('mousemove', this._mouseMoveHandler);
     }
 
     #getCurrentWeek(){
@@ -497,17 +598,17 @@ class WebCCalendar extends HTMLElement
         let colWeeks = document.createElement('div');
         colWeeks.classList.add('col');
         colWeeks.classList.add('weeks');
-        month.weeks.forEach(function(pWeek){
+        month.weeks.forEach((pWeek)=>{
             let d = document.createElement('div');
             d.classList.add('week');
             d.innerHTML = pWeek;
             colWeeks.appendChild(d);
         });
         this.shadow.querySelector('.container .days').appendChild(colWeeks);
-        month.dates.forEach(function(pDays){
+        month.dates.forEach((pDays)=>{
             let col = document.createElement('div');
             col.classList.add('col');
-            pDays.forEach(function(pDay){
+            pDays.forEach((pDay)=>{
                 let d = document.createElement('div');
                 if(pDay.title){
                     d.setAttribute("title", pDay.title);
@@ -520,15 +621,15 @@ class WebCCalendar extends HTMLElement
                 let s = document.createElement('span');
                 s.innerHTML = pDay.label;
                 d.appendChild(s);
-                d.addEventListener(evt, ref.#dayClickedHandler.proxy(ref));
-                if(ref.isRange()){
-                    d.addEventListener('mouseover', ref.#dayOverHandler.proxy(ref));
+                d.addEventListener(evt, this.#dayClickedHandler.bind(this));
+                if(this.isRange()){
+                    d.addEventListener('mouseover', this.#dayOverHandler.bind(this));
                 }
 
-                if(ref.events[pDay.value]){
+                if(this.events[pDay.value]){
                     let evts = document.createElement('div');
                     evts.classList.add('events');
-                    ref.events[pDay.value].forEach(function(pColor){
+                    this.events[pDay.value].forEach((pColor)=>{
                         let ele = document.createElement('div');
                         ele.style.backgroundColor = pColor;
                         evts.appendChild(ele);
@@ -625,13 +726,19 @@ class WebCCalendar extends HTMLElement
 
     #disableWeekDays(){
         let ref = this;
-        this.shadow.querySelectorAll('.container .days .col:not(.weeks)').forEach(function(pCol, pIndex){
+        this.shadow.querySelectorAll('.container .days .col:not(.weeks)').forEach((pCol, pIndex)=>{
             if(ref.disabledWeekDays.indexOf(pIndex)>-1){
                 pCol.classList.add('disabled');
             }else{
                 pCol.classList.remove('disabled');
             }
         });
+    }
+
+    #formatHours(pHours, pMinutes){
+        pHours = pHours<10?"0"+pHours:pHours;
+        pMinutes = pMinutes<10?"0"+pMinutes:pMinutes;
+        return pHours+":"+pMinutes;
     }
 
     dateToStr(pDate){

@@ -32,6 +32,75 @@
     let sec = document.querySelector('.container .secondary webc-calendar');
     let main = document.querySelector('.container .main webc-calendar');
 
+    let events = [
+        {'date':'2023-03-09','startAt':'10:00','duration':60,'title':'Atelier d\'estimations - HCP','style':'background:#88AB75;color:white;font-size:0.7em;'},
+        {'date':'2023-03-09','startAt':'10:00','duration':60,'title':'Atelier d\'estimations - Mobile','style':'background:#DBD56E;color:white;font-size:0.7em;'},
+        {
+            'date':'2023-03-09',
+            'startAt':'14:00',
+            'duration':60,
+            'title':'Atelier d\'estimations - Idomed',
+            'style':'background:#DBD56E;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-09',
+            'startAt':'15:00',
+            'duration':60,
+            'title':'Atelier d\'estimations - Stéphane',
+            'style':'background:#2D93AD;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-09',
+            'startAt':'14:00',
+            'duration':60,
+            'title':'Atelier d\'estimations - VXL',
+            'style':'background:#2D93AD;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-09',
+            'startAt':'11:00',
+            'duration':60,
+            'title':'Atelier d\'estimations - Pharma',
+            'style':'background:#2D93AD;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-09',
+            'startAt':'16:00',
+            'duration':30,
+            'title':'Préparation de démo - Mobile',
+            'style':'background:#DBD56E;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-09',
+            'startAt':'16:30',
+            'duration':30,
+            'title':'Préparation de démo - HCP',
+            'style':'background:#88AB75;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-09',
+            'startAt':'17:00',
+            'duration':30,
+            'title':'Préparation de démo - Web',
+            'style':'background:#2D93AD;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-10',
+            'startAt':'10:00',
+            'duration':120,
+            'title':'Démo Digital',
+            'style':'background:#DE8F6E;color:white;font-size:0.7em;'
+        },
+        {
+            'date':'2023-03-10',
+            'startAt':'14:00',
+            'duration':90,
+            'title':'Hebdo Digital',
+            'style':'background:#66CED6;color:white;font-size:0.7em;'
+        }
+    ];
+
+    main.setAttribute("events", JSON.stringify(events));
     sec.addEventListener(WebCCalendar.EVENT_DAY_SELECTED, function(pEvent){
         main.setAttribute("current-date", pEvent.detail.value);
     });

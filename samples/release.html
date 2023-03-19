@@ -14,8 +14,8 @@
         .calendar>div.month>div{display:flex;flex-wrap: nowrap;flex:1 1 auto;justify-content: start;}
         .calendar>div.month>div>div.week{border-right:solid 1px #777777;}
         .calendar>div.month>div>div>div{flex:0 0 auto;width:20px;height:20px;display:flex;align-items: center;justify-content: center;font-size:10px;}
-        .weekend{background:#eee;}
-        .sprint{top:100px;height:20px;background:#777;position: absolute;color:#fff;display:flex;align-items:center;justify-content: center;}
+        .weekend{background:#efefef;}
+        .sprint{top:100px;height:20px;background:#17BEBB;position: absolute;color:#fff;display:flex;align-items:center;justify-content: center;font-size:11px;border-radius: 5px;}
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
@@ -36,8 +36,11 @@
         function init(){
             let d = new Date(2023,0,1);
             let week;
-            let sprint = false;
             let sprint_count = 1;
+            let sprints = {"2023-07-31":33};
+            let defaultSprintDuration = 12;
+            let nextSprint = "2023-01-02";
+
             while(d.getFullYear()<2024){
                 let container = document.querySelector('.month_'+d.getMonth());
                 if(!container){
@@ -61,23 +64,37 @@
                 day.appendChild(dayNumber);
                 container.appendChild(day);
 
-                if(d.getDay() === 1){
-                    if(!sprint){
-                        let s = document.createElement('div');
-                        s.classList.add('sprint');
-                        s.style.left = (day.getBoundingClientRect().x)+"px";
-                        s.style.width = (12 * 20)+"px";
-                        s.innerHTML = d.getFullYear().toString().slice(2, 4)+"."+(sprint_count<10?"0"+sprint_count:sprint_count);
-                        document.querySelector('.container').appendChild(s);
-                        sprint = true;
-                        sprint_count++;
-                    }else{
-                        sprint = false;
+                let current_date = formatDate(d);
+                if(d.getDay() === 1 && current_date === nextSprint){
+                    if(!sprints[current_date]){
+                        sprints[current_date] = defaultSprintDuration;
                     }
+                    let s = document.createElement('div');
+                    s.classList.add('sprint');
+                    s.style.left = (day.getBoundingClientRect().x)+"px";
+                    s.style.width = ((sprints[current_date] * 20) + (Math.floor(sprints[current_date]/7)))+"px";
+                    s.innerHTML = d.getFullYear().toString().slice(2, 4)+"."+(sprint_count<10?"0"+sprint_count:sprint_count);
+                    document.querySelector('.container').appendChild(s);
+                    sprint_count++;
+                    let nDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                    nDate.setDate(nDate.getDate()+sprints[current_date]+2);
+                    nextSprint = formatDate(nDate);
                 }
 
                 d.setDate(d.getDate()+1);
             }
+        }
+
+        function formatDate(pDate){
+            let month = pDate.getMonth()+1;
+            let date = pDate.getDate();
+            if(month<10){
+                month = "0"+month;
+            }
+            if(date<10){
+                date = "0"+date;
+            }
+            return pDate.getFullYear()+"-"+month+"-"+date;
         }
 
         document.addEventListener('DOMContentLoaded', init);
