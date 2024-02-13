@@ -141,7 +141,7 @@ class WebCCalendar extends HTMLElement
             'hoverBackground':'#bceef5',
             'hover':'#000'
         };
-        this.events = [];
+        this.events = {};
         this._mouseUpHandler = this.#hourMouseUpHandler.bind(this);
         this._mouseMoveHandler = this.#hourMouseMoveHandler.bind(this);
     }
@@ -152,7 +152,7 @@ class WebCCalendar extends HTMLElement
         }
         switch(pAttr){
             case 'current-date':
-                this.currentDate = this.strToDate(pNewValue);
+                this.currentDate = this.formatDate(pNewValue);
                 break;
             case 'display':
                 if(['week', 'month'].indexOf(pNewValue)>-1){
@@ -170,7 +170,9 @@ class WebCCalendar extends HTMLElement
                 break;
             case "events":
                 let events = JSON.parse(pNewValue)||[];
-                this.events = {};
+                this.events = {
+                    frequency:{}
+                };
                 events.forEach((pEvent)=>{
                     if(!this.events[pEvent.date]){
                         this.events[pEvent.date] = [];
@@ -218,7 +220,7 @@ class WebCCalendar extends HTMLElement
     connectedCallback(){
         this.shadow = this.attachShadow({mode: 'closed'});
         let tpl = WebCCalendar.#TEMPLATE;
-        tpl = tpl.replaceAll('@date.formatted_today', this.dateToStr(new Date()));
+        tpl = tpl.replaceAll('@date.formatted_today', this.formatDate(new Date()));
         tpl = tpl.replaceAll('@local.today', WebCCalendar.Localization.today);
         tpl = tpl.replaceAll('@svg', WebCCalendar.#ARROW);
         for(let l in this.colors){
@@ -302,7 +304,7 @@ class WebCCalendar extends HTMLElement
         }
         this.#render();
         this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_MONTH_CHANGED, {composed:true, detail:{currentDate:this.currentDate}}));
-        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_DATE_CHANGED, {composed:true, detail:{currentDate:this.currentDate, formattedCurrentDate:this.dateToStr(this.currentDate)}}));
+        this.dispatchEvent(new CustomEvent(WebCCalendar.EVENT_DATE_CHANGED, {composed:true, detail:{currentDate:this.currentDate, formattedCurrentDate:this.formatDate(this.currentDate)}}));
     }
 
     #todayClickedHandler(){
@@ -689,8 +691,8 @@ class WebCCalendar extends HTMLElement
     }
 
     #prepareDate(pDate){
-        let formattedToday = this.dateToStr(new Date());
-        let formattedDate = this.dateToStr(pDate);
+        let formattedToday = this.formatDate(new Date());
+        let formattedDate = this.formatDate(pDate);
         let cls = [];
         let title = null;
         if(formattedDate===formattedToday){
@@ -741,7 +743,7 @@ class WebCCalendar extends HTMLElement
         return pHours+":"+pMinutes;
     }
 
-    dateToStr(pDate){
+    formatDate(pDate){
         let parts = {
             'YYYY':pDate.getUTCFullYear(),
             'MM':pDate.getMonth() + 1,
@@ -762,7 +764,7 @@ class WebCCalendar extends HTMLElement
     }
 
     strToDate(pStr){
-        let y = pStr.slice(this.format.indexOf('YYYY'), 4);
+        let y = pStr.slice(this.format.indexOf('YYYY'), this.format.indexOf('YYYY')+4);
         let m = pStr.slice(this.format.indexOf('MM'), this.format.indexOf('MM')+2);
         let d = pStr.slice(this.format.indexOf('DD'), this.format.indexOf('DD')+2);
         return new Date(y,m-1,d);

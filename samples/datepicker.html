@@ -8,11 +8,19 @@
 </head>
 <body>
 <header>WebComponent-Calendar</header>
+<hr/>
 <form>
-    <p>
-        <label>Date : </label>
-        <div class="input"><input type="text" data-comp="webc-calendar" value="2021-03-02" name="bouboup[date]"/></div>
-    </p>
+    <div>
+        <label>Date unique : </label>
+        <div class="input"><input type="text" class="webcc-picker" value="02-03-2024" name="bouboup[date]"/></div>
+    </div>
+    <hr/>
+    <div>
+        <label>Date de début : </label>
+        <div class="input"><input type="text" id="start_date" class="webcc-picker" data-date-max="#end_date" value="2021-03-02" name="bouboup[start_date]"/></div>
+        <label>Date de fin : </label>
+        <div class="input"><input type="text" id="end_date" class="webcc-picker" data-date-min="#start_date" value="2021-03-15" name="bouboup[end_date]"/></div>
+    </div>
 </form>
 <footer>
     footer
