@@ -152,7 +152,7 @@ class WebCCalendar extends HTMLElement
         }
         switch(pAttr){
             case 'current-date':
-                this.currentDate = this.formatDate(pNewValue);
+                this.currentDate = new Date(pNewValue);
                 break;
             case 'display':
                 if(['week', 'month'].indexOf(pNewValue)>-1){
@@ -744,6 +744,9 @@ class WebCCalendar extends HTMLElement
     }
 
     formatDate(pDate){
+        if(!pDate){
+            return "";
+        }
         let parts = {
             'YYYY':pDate.getUTCFullYear(),
             'MM':pDate.getMonth() + 1,

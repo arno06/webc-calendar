@@ -1,20 +1,25 @@
 const WebCPicker = (function(){
-    let instances = [];
+    let instances = {};
     let API = {
         instance:function(pElement){
-            return instances[pElement.getAttribute("name")]||null;
+            return instances[pElement.getAttribute("id")]||null;
         },
         setup:function(pElement){
             let div = document.createElement('div');
             div.classList.add('datePicker');
             let parent = pElement.parentNode;
+            let ref = pElement.nextElementSibling;
             pElement.parentNode.removeChild(pElement);
-            parent.appendChild(div);
+            if(ref){
+                parent.insertBefore(div, ref);
+            }else{
+                parent.appendChild(div);
+            }
             div.appendChild(pElement);
             pElement.value = pElement.value.split(" ")[0];
             let calendar = document.createElement('webc-calendar');
             calendar.style.display = "none";
-            calendar.setAttribute("format", pElement.getAttribute("data-format")||"DD-MM-YYYY");
+            calendar.setAttribute("format", pElement.getAttribute("data-format")||"DD/MM/YYYY");
             if(pElement.value){
                 pElement.value = calendar.formatDate(new Date(pElement.value));
                 calendar.setAttribute("selected-dates", pElement.value);
@@ -31,6 +36,8 @@ const WebCPicker = (function(){
                     calendar.setAttribute('current-date', calendar.formatDate(new Date()));
                 }
                 calendar.style.display = "block";
+                calendar.style.position = "absolute";
+                calendar.style.zIndex = 40;
                 let dateMinSelector = pElement.getAttribute("data-date-min");
                 if(dateMinSelector && document.querySelector(dateMinSelector) &&document.querySelector(dateMinSelector).value){
                     calendar.setAttribute("date-min", document.querySelector(dateMinSelector).value);
@@ -57,7 +64,11 @@ const WebCPicker = (function(){
                 pElement.value = e.detail.value;
                 calendar.style.display = "none";
             });
-            instances[pElement.getAttribute("name")] = calendar;
+            instances[pElement.getAttribute("id")] = calendar;
+        },
+        getValueOf:(pId)=>{
+            let target = document.getElementById(pId);
+            return WebCPicker.instance(target).strToDate(target.value);
         }
     };
 
