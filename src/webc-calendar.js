@@ -194,10 +194,10 @@ class WebCCalendar extends HTMLElement
                 }
                 break;
             case "date-min":
-                this.dateMin = this.strToDate(pNewValue);
+                this.dateMin = pNewValue?this.strToDate(pNewValue):null;
                 break;
             case "date-max":
-                this.dateMax = this.strToDate(pNewValue);
+                this.dateMax = pNewValue?this.strToDate(pNewValue):null;
                 break;
             case "selected-dates":
                 this.selectedDates = pNewValue.split(WebCCalendar.#SEPARATOR);
