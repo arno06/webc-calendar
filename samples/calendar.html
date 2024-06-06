@@ -6,12 +6,16 @@
     <script src="../src/webc-calendar.js"></script>
     <style>
         html,body{width:100%;height:100%;padding:0;margin:0;font-family: sans-serif;}
-        body{display:flex;flex-direction: column;}
+        body{display:flex;flex-direction: column;position:relative;}
         body header, body footer{flex:0 0 auto;}
         body .container{display:flex;flex:1;}
-        body .container .secondary{flex:0;margin-right:1em;}
+        body .container .secondary{flex:0;margin-right:1em;padding:1em;}
         body .container .main{flex:1;}
         webc-calendar{box-shadow: none;}
+        .modal{opacity:1;position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(0, 0, 0, .3);transition:all .3s;display:flex;align-items: center;justify-content: center;}
+        .modal.hidden{pointer-events: none;opacity: 0;z-index:99;}
+        .modal .content{width:500px;height:400px;background:#fff;border-radius:1em;box-shadow: 0 2px 4px rgba(0, 0, 0, .3);transition: all .3s;}
+        .modal.hidden .content{transform:translateY(50px);}
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
@@ -23,6 +27,11 @@
     </div>
     <div class="main">
         <webc-calendar display="week" class="expanded"></webc-calendar>
+    </div>
+    <div class="modal hidden">
+        <div class="content">
+            <input name="name" type="text" value="Nom de l'évènement">
+        </div>
     </div>
 </div>
 <footer>
@@ -96,7 +105,7 @@
             'style':'background:#DE8F6E;color:white;font-size:0.7em;'
         },
         {
-            'date':'2023-03-10',
+            'date':'2024-06-05',
             'startAt':'14:00',
             'duration':90,
             'title':'Hebdo Digital',
@@ -110,6 +119,12 @@
     });
     main.addEventListener(WebCCalendar.EVENT_DATE_CHANGED, function(pEvent){
         sec.setAttribute('selected-dates', pEvent.detail.formattedCurrentDate);
+    });
+    main.addEventListener(WebCCalendar.EVENT_CREATE_EVENT, function(pEvent){
+        pEvent.detail.event.title = "Nouvel évènement";
+        pEvent.detail.event.style = "background:#66CED6;color:white;font-size:.7em";
+        events.push(pEvent.detail.event);
+        main.setAttribute("events", JSON.stringify(events));
     });
 </script>
 </body>
