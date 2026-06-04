@@ -34,14 +34,14 @@
         const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
         function init(){
-            let d = new Date(2023,0,1);
+            let d = new Date(2025,0,1);
             let week;
             let sprint_count = 1;
-            let sprints = {"2023-07-31":33};
+            let sprints = {"2025-07-31":33};
             let defaultSprintDuration = 12;
-            let nextSprint = "2023-01-02";
+            let nextSprint = "2025-01-06";
 
-            while(d.getFullYear()<2024){
+            while(d.getFullYear()<2026){
                 let container = document.querySelector('.month_'+d.getMonth());
                 if(!container){
                     const parent = document.createElement('div');

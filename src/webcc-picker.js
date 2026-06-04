@@ -21,7 +21,7 @@ const WebCPicker = (function(){
             calendar.style.display = "none";
             calendar.setAttribute("format", pElement.getAttribute("data-format")||"DD/MM/YYYY");
             if(pElement.value){
-                pElement.value = calendar.formatDate(new Date(pElement.value));
+                pElement.value = calendar.formatDate(calendar.strToDate(pElement.value));
                 calendar.setAttribute("selected-dates", pElement.value);
             }
             pElement.parentNode.style.position = "relative";
